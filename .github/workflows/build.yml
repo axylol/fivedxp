@@ -1,0 +1,40 @@
+name: Build
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build
+        run: |
+          # make it so we can download 32 bit libs 
+          sudo dpkg --add-architecture i386
+          
+          # update package list
+          sudo apt-get update
+          
+          # install dependecies
+          sudo apt-get install -y build-essential gcc-multilib g++-multilib
+          
+          # remove prebuilt dobby
+          rm -f libdobby.a
+          
+          # build dobby
+          git clone https://github.com/jmpews/Dobby
+          cd Dobby
+          git reset --hard 0932d69c320e786672361ab53825ba8f4245e9d3
+          python3 scripts/platform_builder.py --platform=linux --arch=x86  
+          mv ./build/linux/x86/libdobby.a ..
+          cd ..
+          
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build . --target all -j 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: build/libfivedxp.so
