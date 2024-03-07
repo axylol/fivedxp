@@ -248,6 +248,9 @@ defineHook(int, bind, int sockfd, const struct sockaddr *addr, socklen_t addrlen
     if (port == 50765) {
         int one = 1;
         setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(int));
+
+        // bind on 0.0.0.0 for terminal
+        in->sin_addr.s_addr = 0;
     }
 
     return callOld(bind, sockfd, addr, addrlen);
@@ -261,6 +264,11 @@ defineHook(int, connect, int sockfd, const struct sockaddr *addr, socklen_t addr
     inet_ntop(AF_INET, &in->sin_addr, ip, sizeof(ip));
 
     printf("connect %s %d\n", ip, port);
+
+    if (port == 50765) {
+        in->sin_addr.s_addr = inet_addr("127.0.0.1");
+    }
+
     return callOld(connect, sockfd, addr, addrlen);
 }
 
@@ -309,6 +317,62 @@ defineHook(void, 84EC560, int * a1) {
 
 defineHook(void, billingSave) {
 
+}
+
+uint8_t ourPcb = 255;
+defineHook(ssize_t, recvmsg, int fd, struct msghdr *msg, int flags) {
+    int ret = callOld(recvmsg, fd, msg, flags);
+    if (ret < 0)
+        return ret;
+
+    if (msg->msg_name) {
+        struct sockaddr_in* in = ((struct sockaddr_in*) msg->msg_name);
+        int port = ntohs(in->sin_port);
+
+        uint8_t* data = (uint8_t*)msg->msg_iov->iov_base;
+        if (port == 50765) {
+            if (data[0] == 2) {
+                //printf("%d %d\n", data[1], ourPcb);
+                if (data[1] != ourPcb) {
+                    switch (data[1]) {
+                        case 0: {
+                            in->sin_addr.s_addr = inet_addr("192.168.92.11");
+                            break;
+                        }
+                        case 1: {
+                            in->sin_addr.s_addr = inet_addr("192.168.92.12");
+                            break;
+                        }
+                        case 2: {
+                            in->sin_addr.s_addr = inet_addr("192.168.92.13");
+                            break;
+                        }
+                        case 3: {
+                            in->sin_addr.s_addr = inet_addr("192.168.92.14");
+                            break;
+                        }
+                        case 4: {
+                            in->sin_addr.s_addr = inet_addr("192.168.92.20");
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return ret;
+}
+
+defineHook(ssize_t, sendmsg, int fd, struct msghdr *msg, int flags) {
+    if (msg->msg_name) {
+        struct sockaddr_in* in = ((struct sockaddr_in*) msg->msg_name);
+        int port = ntohs(in->sin_port);
+        if (port == 50765) {
+            ourPcb = *(uint8_t*)((uint8_t*)msg->msg_iov->iov_base + 1);
+        }
+    }
+    return callOld(sendmsg, fd, msg, flags);
 }
 
 __attribute__((constructor))
@@ -374,6 +438,11 @@ void initialize_wlldr() {
         // dont connect to mucha
         patchMemoryString0((void*)0xaafaa88, "localhost");
     }
+
+    if (isTerminal)
+        ourPcb = 4;
+    enableHook(recvmsg, recvmsg);
+    enableHook(sendmsg, sendmsg);
 
 
     enableHook(system, system);
