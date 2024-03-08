@@ -389,7 +389,7 @@ defineHook(ssize_t, recvmsg, int fd, struct msghdr *msg, int flags) {
         int port = ntohs(in->sin_port);
 
         uint8_t* data = (uint8_t*)msg->msg_iov->iov_base;
-        if (port == 50765) {
+        if (port == 50765 && msg->msg_iov->iov_len >= 2) {
             if (data[0] == isMt4 ? 0 : 2) {
                 //printf("%d %d\n", data[1], ourPcb);
                 if (data[1] != ourPcb) {
@@ -447,17 +447,15 @@ defineHook(int, createDisplayMt4, int a1) {
     return ret;
 }
 
-defineHook(void, sub_86FBBA0, int a1, int width, int height) {
-    printf("%d %d\n", width, height);
-    callOld(sub_86FBBA0, a1, width, height);
-}
-
 defineHook(ssize_t, sendmsg, int fd, struct msghdr *msg, int flags) {
     if (msg->msg_name) {
         struct sockaddr_in* in = ((struct sockaddr_in*) msg->msg_name);
         int port = ntohs(in->sin_port);
-        if (port == 50765) {
-            ourPcb = *(uint8_t*)((uint8_t*)msg->msg_iov->iov_base + 1);
+        if (port == 50765 && msg->msg_iov->iov_len >= 2) {
+            uint8_t* data = (uint8_t*)msg->msg_iov->iov_base;
+            if (data[0] == isMt4 ? 0 : 2) {
+                ourPcb = data[1];
+            }
         }
     }
     return callOld(sendmsg, fd, msg, flags);
