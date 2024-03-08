@@ -44,6 +44,7 @@ fivedxp linux loader (5dx+ 2.20.02 & 4 1.10.08)
 - ```./start.sh```
 
 # TODO
+- fix resolution in mt4
 - rewrite jvs, touch
 - proper terminal fix
 - make touch emu
