@@ -2,6 +2,7 @@
 fivedxp linux loader (2.20.02)
 
 - currently only works with controllers
+- use a keyboard to controller software if you want to use keyboard
 
 # xbox controls
 - y = view change
