@@ -52,7 +52,7 @@ defineHook(int, system, const char* command) {
 }
 
 defineHook(int, open, const char *pathname, int flags, ...) {
-    printf("open(\"%s\", %d)\n", pathname, flags);
+    //printf("open(\"%s\", %d)\n", pathname, flags);
 
     int mode = 0;
     bool twoArgs = true;
@@ -510,8 +510,11 @@ void initialize_wlldr() {
         if (config.contains("sys_monitor"))
             redirectSysMonitor = true;
 
-        if (config.contains("mt4"))
+        if (config.contains("mt4")) {
+
+
             isMt4 = config.at("mt4").get<bool>();
+        }
 
         if (config.contains("surround51"))
             useSurround51 = config.at("surround51").get<bool>();

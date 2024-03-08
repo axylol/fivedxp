@@ -31,15 +31,14 @@ defineHook(void, SSLv2totls, int* a1, int a2) {
 }
 
 typedef void* (*t_TLSv1_method)();
-t_TLSv1_method TLSv1_method = NULL;
+
+// they tried to load TLSv1_method from here :sob:
+t_TLSv1_method TLSv1_method_fake = NULL;
 
 defineHook(void*, SSLv23_method) {
-    if (!TLSv1_method) {
-        TLSv1_method = (t_TLSv1_method)dlsym(dlopen("libssl.so.0.9.8", 2), "TLSv1_method");
-    }
-    void* met = TLSv1_method();
-    printf("use tls1 instead of ssl2 %p\n", met);
-    return met;
+    if (!TLSv1_method_fake)
+        TLSv1_method_fake = (t_TLSv1_method)dlsym(dlopen("libssl.so.0.9.8", 2), "TLSv1_method");
+    return TLSv1_method_fake();
 }
 
 void disableSSLCert() {
