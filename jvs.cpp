@@ -720,6 +720,13 @@ void update_jvs()
                         outputPacket.data[outputPacket.length++] = 0x0; // dip switch
                         break;
                     }
+                    case 5: { // card vender?
+                        printf("namco cmd 5%d\n", inputPacket.data[index + 2]);
+                        size = 3 + inputPacket.data[index + 2];
+
+                        outputPacket.data[outputPacket.length++] = 0x01;
+                        break;
+                    }
                     case 0x15: {
 #ifdef JVS_DEBUG
                         printf("namco 0x15\n");
@@ -768,6 +775,10 @@ void update_jvs()
                 printf("CMD_DECREASE_COINS\n");
                 size = 4;
                 outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
+                break;
+            }
+            case 0x50: {
+
                 break;
             }
             default:

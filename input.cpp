@@ -56,11 +56,9 @@ defineHook(int, initWindow, int a1) {
 }
 
 void init_input() {
-    enableHook(initWindow, 0xa824460);
+    // mt5 addr enableHook(initWindow, 0xa824460);
 
     SDL_SetMainReady();
-    SDL_SetHint(SDL_HINT_VIDEO_WINDOW_SHARE_PIXEL_FORMAT, "1");
-    SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
 
     // hacky fix for ctrl+c
     struct sigaction action;

@@ -30,6 +30,11 @@ using namespace nlohmann;
 
 int jvsFd = 144444443;
 int touchFd = 144444444;
+int strFd = 144444445;
+
+#include <GL/gl.h>
+#include <GL/glx.h>
+
 
 void jvsThread() {
     init_input();
@@ -68,11 +73,12 @@ defineHook(int, open, const char *pathname, int flags, ...) {
     if (strcmp(pathname, "/dev/ttyS2") == 0)
         return jvsFd;
 
-    if (isTerminal) {
-        if (strcmp(pathname, "/dev/ttyS0") == 0) {
+    if (strcmp(pathname, "/dev/ttyS0") == 0) {
+        if (isTerminal) {
             initTouch();
             return touchFd;
         }
+        return strFd;
     }
 
     if(twoArgs)
@@ -84,6 +90,8 @@ defineHook(int, close, int fd) {
     if (fd == jvsFd)
         return 0;
     if (fd == touchFd)
+        return 0;
+    if (fd == strFd)
         return 0;
     return callOld(close, fd);
 }
@@ -107,11 +115,16 @@ defineHook(int, ioctl, int fd, unsigned long request) {
     if (fd == touchFd)
         return 0;
 
+    if (fd == strFd)
+        return 0;
+
     return callOld(ioctl, fd, request);
 }
 
 defineHook(int, fcntl, int fd, int cmd, void* arg) {
     if (fd == touchFd)
+        return 0;
+    if (fd == strFd)
         return 0;
     return callOld(fcntl, fd, cmd, arg);
 }
@@ -127,6 +140,8 @@ defineHook(int, tcgetattr, int fildes, struct termios *termios_p) {
         return 0;
     if (fildes == touchFd)
         return 0;
+    if (fildes == strFd)
+        return 0;
     return callOld(tcgetattr, fildes, termios_p);
 }
 
@@ -135,6 +150,8 @@ defineHook(int, tcsetattr, int fildes, int optional_actions,
     if (fildes == jvsFd)
         return 0;
     if (fildes == touchFd)
+        return 0;
+    if (fildes == strFd)
         return 0;
     return callOld(tcsetattr, fildes, optional_actions, termios_p);
 }
@@ -152,6 +169,19 @@ defineHook(int, read, int fd, void* buf, size_t count) {
             return 0;
         return size;
     }
+
+    if (fd == strFd) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (fd == touchFd) {
+        int size;
+        if (!readTouch(buf, &size))
+            return 0;
+        return size;
+    }
+
     return callOld(read, fd, buf, count);
 }
 
@@ -160,6 +190,15 @@ defineHook(int, write, int fd, const void* buf, size_t count) {
         writeJvs((void*)buf, count);
         return count;
     }
+
+    if (fd == strFd)
+        return count;
+
+    if (fd == touchFd) {
+        writeTouch((void*)buf, count);
+        return count;
+    }
+
     return callOld(write, fd, buf, count);
 }
 
@@ -191,40 +230,54 @@ defineHook(FILE*, popen, const char* command, const char* type) {
 
 char logBuffer[0x10000];
 
-#define LOG_COMMON() va_list va; \
-va_start(va, msg); \
-int len = vsnprintf(logBuffer, sizeof(logBuffer), msg, va); \
-va_end(va); \
-if (len < 1) \
-return;                          \
-if (strstr(logBuffer, "********* Texture:") != NULL) return;                                 \
-switch (type) { \
-case 1: { \
-printf("[INF] "); \
-break; \
-} case 2: { \
-printf("[WRN] "); \
-break; \
-} case 3: { \
-printf("[SYS] "); \
-break; \
-} case 4: { \
-printf("[ERR] "); \
-break; \
-} \
-}\
-printf("%s\n", logBuffer);
-
-defineHook(void, log1, void* a1, int type, const char* msg, ...) {
-    LOG_COMMON();
+defineHook(void, log, void* a1, int type, const char* msg, ...) {
+    va_list va;
+    va_start(va, msg);
+    int len = vsnprintf(logBuffer, sizeof(logBuffer), msg, va);
+    va_end(va);
+    if (len < 1)
+        return;
+    switch (type) {
+        case 1: {
+            printf("[INF] ");
+            break;
+        } case 2: {
+            printf("[WRN] ");
+            break;
+        } case 3: {
+            printf("[SYS] ");
+            break;
+        } case 4: {
+            printf("[ERR] ");
+            break;
+        }
+    }
+    printf("%s\n", logBuffer);
 }
 
-defineHook(void, log2, void* a1, int type, const char* msg, ...) {
-    LOG_COMMON();
-}
-
-defineHook(void, log3, void* a1, int type, const char* msg, ...) {
-    LOG_COMMON();
+defineHook(void, logmt4, int type, const char* msg, ...) {
+    va_list va;
+    va_start(va, msg);
+    int len = vsnprintf(logBuffer, sizeof(logBuffer), msg, va);
+    va_end(va);
+    if (len < 1)
+        return;
+    switch (type) {
+        case 1: {
+            printf("[INF] ");
+            break;
+        } case 2: {
+            printf("[WRN] ");
+            break;
+        } case 3: {
+            printf("[SYS] ");
+            break;
+        } case 4: {
+            printf("[ERR] ");
+            break;
+        }
+    }
+    printf("%s\n", logBuffer);
 }
 
 defineHook(int, getContentRouter)
@@ -235,6 +288,12 @@ defineHook(int, getContentRouter)
 defineHook(int, isTerminal)
 {
     return 1;
+}
+
+defineHook(int, isTerminalMt4, int* a1)
+{
+    a1[1] = 0x8365070;
+    return 0;
 }
 
 defineHook(int, touchPanelFix) {
@@ -331,7 +390,7 @@ defineHook(ssize_t, recvmsg, int fd, struct msghdr *msg, int flags) {
 
         uint8_t* data = (uint8_t*)msg->msg_iov->iov_base;
         if (port == 50765) {
-            if (data[0] == 2) {
+            if (data[0] == isMt4 ? 0 : 2) {
                 //printf("%d %d\n", data[1], ourPcb);
                 if (data[1] != ourPcb) {
                     switch (data[1]) {
@@ -376,6 +435,23 @@ defineHook(int, XCreatePixmapCursor) {
     return 0;
 }
 
+defineHook(int, createWindowMt4, int a1) {
+    *(int*)(a1 + 28) = 1360;
+    *(int*)(a1 + 32) = 768;
+    return callOld(createWindowMt4, a1);
+}
+defineHook(int, createDisplayMt4, int a1) {
+    int ret = callOld(createDisplayMt4, a1);
+    *(int*)(a1 + 16) = 1360;
+    *(int*)(a1 + 20) = 768;
+    return ret;
+}
+
+defineHook(void, sub_86FBBA0, int a1, int width, int height) {
+    printf("%d %d\n", width, height);
+    callOld(sub_86FBBA0, a1, width, height);
+}
+
 defineHook(ssize_t, sendmsg, int fd, struct msghdr *msg, int flags) {
     if (msg->msg_name) {
         struct sockaddr_in* in = ((struct sockaddr_in*) msg->msg_name);
@@ -385,6 +461,29 @@ defineHook(ssize_t, sendmsg, int fd, struct msghdr *msg, int flags) {
         }
     }
     return callOld(sendmsg, fd, msg, flags);
+}
+
+defineHook(int, refreshNetwork, int a1) {
+    int ret = callOld(refreshNetwork, a1);
+    printf("refreshNetwork=%d\n", ret);
+
+    if (ret != 1)
+        return ret;
+    *(int*)(a1 + 20) = htons(inet_addr("192.168.92.254"));
+    return 1;
+}
+
+defineHook(int, str400Receive, int a1, int* a2) {
+    *a2 = 0;
+    return 0;
+}
+
+defineHook(int, str400_reset_status_wait, int* param1) {
+    printf("str400_reset_status_wait\n");
+
+    *param1 = 0x82D5BC0; // 0
+    param1[1] = 0; // 4
+    return 1;
 }
 
 __attribute__((constructor))
@@ -412,6 +511,9 @@ void initialize_wlldr() {
 
         if (config.contains("sys_monitor"))
             redirectSysMonitor = true;
+
+        if (config.contains("mt4"))
+            isMt4 = config.at("mt4").get<bool>();
     } catch (json::exception e) {
         f.close();
 
@@ -422,19 +524,74 @@ void initialize_wlldr() {
         return;
     }
 
-    printf("terminal = %d\n", isTerminal);
+    printf("terminal=%d, mt4=%d\n", isTerminal, isMt4);
 
     initHasp();
+    printf("hasp\n");
     initNsadrv();
+    printf("nsadrv\n");
     initSysMonitor();
+    printf("monitor\n");
     initBana();
+    printf("bana\n");
 
     // disable ssl verification for mucha
-    disableSSLCert();
+   // disableSSLCert();
+    printf("ssl\n");
 
-    patchMemoryString0((void*)0xaafaa88, "mucha.local");
-    //patchMemory((void*)0x81de9fc, { 0x66, 0xc7, 0x85, 0x62, 0xfe, 0xff, 0xff, 0xBB, 0x01 });
-    enableHook(decryptToken, 0xAA77780);
+    if (isMt4) {
+        patchMemoryString0((void*)0x8c11004, "mucha.local");
+
+        enableHook(logmt4, 0x808B6B0);
+        enableHook(log, 0x80BCA60);
+
+
+        if (isTerminal)
+            enableHook(isTerminalMt4, 0x83665D0);
+
+        // content router fix
+        enableHook(refreshNetwork, 0x81BF4F0);
+        patchMemory((void*)0x80912bd, { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 });
+
+        enableHook(sendAlthmand, 0x89e5c80);
+
+        enableHook(str400_reset_status_wait, 0x82D8A00);
+        enableHook(str400Receive, 0x82E8520);
+
+        // TODO: resolution fix
+        //enableHook(createWindowMt4, 0x86F8680);
+    } else {
+        patchMemoryString0((void*)0xaafaa88, "mucha.local");
+        //patchMemory((void*)0x81de9fc, { 0x66, 0xc7, 0x85, 0x62, 0xfe, 0xff, 0xff, 0xBB, 0x01 }); // port 443 mucha patch
+        enableHook(decryptToken, 0xAA77780);
+
+        enableHook(log, 0x80bc980);
+        enableHook(log, 0x80bca60);
+        enableHook(log, 0x80bcb40);
+
+        // content router
+        enableHook(getContentRouter, 0x82519d0);
+        patchMemory((void*)0x827f7e3, { 0x0f, 0x85 });
+        patchMemory((void*)0x827f9fc, { 0x0f, 0x84 });
+
+        if (isTerminal) {
+            enableHook(touchPanelFix, 0x83C17E0);
+            enableHook(isTerminal, 0x80eeea0);
+        } else {
+            // local network disconnect fix
+            enableHook(84EC560, 0x84EC560);
+            enableHook(AA75120, 0xAA75120);
+            enableHook(A393BE0, 0xA393BE0);
+
+            // terminal check bypass
+            enableHook(updateTest, 0x84FA120);
+        }
+
+        // dont save billing = dont crash
+        enableHook(billingSave, 0x8401A70);
+
+        enableHook(sendAlthmand, 0xa851320);
+    }
 
     if (isTerminal)
         ourPcb = 4;
@@ -442,7 +599,6 @@ void initialize_wlldr() {
     enableHook(sendmsg, sendmsg);
 
     enableHook(system, system);
-
     enableHook(open, open);
     enableHook(close, close);
     enableHook(tcgetattr, tcgetattr);
@@ -457,33 +613,8 @@ void initialize_wlldr() {
     enableHook(fcntl64, fcntl64);
     enableHook(popen, popen);
 
-    enableHook(log1, 0x80bc980);
-    enableHook(log2, 0x80bca60);
-    enableHook(log3, 0x80bcb40);
-
-    // content router
-    enableHook(getContentRouter, 0x82519d0);
-    patchMemory((void*)0x827f7e3, { 0x0f, 0x85 });
-    patchMemory((void*)0x827f9fc, { 0x0f, 0x84 });
-
     enableHook(bind, bind);
     enableHook(connect, connect);
-
-    if (isTerminal) {
-        enableHook(touchPanelFix, 0x83C17E0);
-        enableHook(isTerminal, 0x80eeea0);
-    } else {
-        // local network disconnect fix
-        enableHook(84EC560, 0x84EC560);
-        enableHook(AA75120, 0xAA75120);
-        enableHook(A393BE0, 0xA393BE0);
-
-        // terminal check bypass
-        enableHook(updateTest, 0x84FA120);
-    }
-
-    // dont save billing = dont crash
-    enableHook(billingSave, 0x8401A70);
 
     void *alin_dll = dlopen("./alin.dll", 2);
     enableHook(alin0, dlsym(alin_dll, "alin_init"));
@@ -491,8 +622,6 @@ void initialize_wlldr() {
     enableHook(alin0, dlsym(alin_dll, "alin_mouse"));
     enableHook(alin0, dlsym(alin_dll, "alin_pad"));
     enableHook(alin0, dlsym(alin_dll, "alin_term"));
-
-    enableHook(sendAlthmand, 0xa851320);
 
     // dont hide cursor
     enableHook(XCreatePixmapCursor, dlsym(dlopen("libX11.so.6", 2),"XCreatePixmapCursor"));

@@ -30,8 +30,25 @@ defineHook(void, SSLv2totls, int* a1, int a2) {
     callOld(SSLv2totls, a1, 6); //tlsv1
 }
 
+typedef void* (*t_TLSv1_method)();
+t_TLSv1_method TLSv1_method = NULL;
+
+defineHook(void*, SSLv23_method) {
+    if (!TLSv1_method) {
+        TLSv1_method = (t_TLSv1_method)dlsym(dlopen("libssl.so.0.9.8", 2), "TLSv1_method");
+    }
+    void* met = TLSv1_method();
+    printf("use tls1 instead of ssl2 %p\n", met);
+    return met;
+}
+
 void disableSSLCert() {
-    enableHook(SSL_CTX_set_verify, 0x80576BC);
-    enableHook(curl_easy_setopt, 0x80560EC);
-    enableHook(SSLv2totls, 0xA764E00);
+    if (isMt4) {
+        enableHook(SSL_CTX_set_verify, 0x8057544);
+        enableHook(SSLv23_method, 0x8056744);
+    } else {
+        enableHook(SSL_CTX_set_verify, 0x80576BC);
+        enableHook(curl_easy_setopt, 0x80560EC);
+        enableHook(SSLv2totls, 0xA764E00);
+    }
 }
