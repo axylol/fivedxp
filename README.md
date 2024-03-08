@@ -1,13 +1,16 @@
 # fivedxpl
-fivedxp linux loader (2.20.02)
+fivedxp linux loader (5dx+ 2.20.02 & 4 1.10.08)
 
-- currently only works with xbox controller
+- currently only works with controllers
+- use a keyboard to controller software if you want to use keyboard
 
-# controls
+# xbox controls
 - y = view change
 - a = interrupt
-- start = service (use this for inserting coin)
-- x = card
+- x = service (use this for inserting coin)
+- b = card
+- left shoulder = shift gear down
+- right shoulder = shift gear up
 - left dpad = toggle test menu
 - up / down dpad = test up / down
 - right dpad = test enter
@@ -41,12 +44,12 @@ fivedxp linux loader (2.20.02)
 - ```./start.sh```
 
 # TODO
-- rewrite jvs + better input handling
+- built in sysmonitor
+- fix resolution in mt4
+- rewrite jvs, touch
 - proper terminal fix
 - make touch emu
-- better input
 
 # credits
 https://github.com/jmpews/Dobby
 https://github.com/OpenJVS/OpenJVS
-https://github.com/drewnoakes/joystick

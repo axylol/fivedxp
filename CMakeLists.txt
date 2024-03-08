@@ -8,13 +8,12 @@ set(CMAKE_CXX_COMPILER g++)
 set(CMAKE_CXX_FLAGS -m32)
 
 add_library(fivedxp SHARED library.cpp
-        joystick.cpp
         jvs.cpp
         touch.cpp
         bana.cpp
         config.cpp
         memory.cpp
+        input.cpp
 )
 
-
-target_link_libraries(fivedxp ${CMAKE_SOURCE_DIR}/libdobby.a)
+target_link_libraries(fivedxp ${CMAKE_SOURCE_DIR}/libdobby.a SDL2)

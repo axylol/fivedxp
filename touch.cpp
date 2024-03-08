@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include "touch.h"
+#include "config.h"
 
 bool sendTouch = false;
 bool touchReady = false;
@@ -33,6 +34,13 @@ void writeTouch(void* packet, int size) {
 }
 
 bool readTouch(void* packet, int* size) {
+    if (isMt4) {
+        // not sure how to deal with this yet
+        memcpy(packet, touchOk, 3);
+        *size = 3;
+        return true;
+    }
+
     if (touchOkResponse < 1) {
         if (!touchReady)
             return false;

@@ -3,4 +3,5 @@
 
 extern bool isTerminal;
 extern std::string accessCode, chipID;
-extern bool isOnline;
+extern bool isMt4;
+extern bool useSurround51;

@@ -2,4 +2,5 @@
 
 bool isTerminal = false;
 std::string accessCode, chipID;
-bool isOnline = false;
+bool isMt4 = false;
+bool useSurround51 = false;

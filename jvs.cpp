@@ -1,13 +1,13 @@
 #include <stdio.h>
-
-#include "joystick.h"
 #include "jvs.h"
 #include "touch.h"
+#include "input.h"
 
 #include <string.h>
 
 #include <vector>
 #include <mutex>
+#include <string>
 
 //#define JVS_DEBUG
 
@@ -720,6 +720,13 @@ void update_jvs()
                         outputPacket.data[outputPacket.length++] = 0x0; // dip switch
                         break;
                     }
+                    case 5: { // card vender?
+                        printf("namco cmd 5%d\n", inputPacket.data[index + 2]);
+                        size = 3 + inputPacket.data[index + 2];
+
+                        outputPacket.data[outputPacket.length++] = 0x01;
+                        break;
+                    }
                     case 0x15: {
 #ifdef JVS_DEBUG
                         printf("namco 0x15\n");
@@ -770,6 +777,10 @@ void update_jvs()
                 outputPacket.data[outputPacket.length++] = REPORT_SUCCESS;
                 break;
             }
+            case 0x50: {
+
+                break;
+            }
             default:
             {
                 printf("unhandled command %d %p\n", inputPacket.data[index], inputPacket.data[index]);
@@ -787,17 +798,7 @@ void update_jvs()
     writePacket(0, &outputPacket);
 }
 
-bool isLastRight = false;
-
-Joystick* joystick;
 void initJvs() {
-    joystick = new Joystick();
-    if (!joystick->isFound())
-    {
-        printf("cant open joystick\n");
-        return;
-    }
-
     memset(analogBytes, 0, 32);
 }
 
@@ -830,150 +831,77 @@ bool readJvs(void* packet, int* size) {
 void updateJvs()
 {
     jvsMutex.lock();
-
-    JoystickEvent event;
-
-    {
-        // update send recv
-        update_jvs();
-
-        if (!joystick->sample(&event)) {
-            jvsMutex.unlock();
-            return;
-        }
-
-        if (event.isButton())
-        {
-            bool down = event.value != 0;
-
-            switch (event.number)
-            {
-                case 2:
-                {
-                    cardPressed = down;
-                    break;
-                }
-                case 3:
-                {
-                    perspectiveSwitch = down;
-                    break;
-                }
-                case 0:
-                {
-                    interuptionSwitch = down;
-                    break;
-                }
-                case 4:
-                {
-                    if (!down)
-                        break;
-                    wmmtGear--;
-                    if (wmmtGear < 0)
-                        wmmtGear = 0;
-                    updateGear();
-                    break;
-                }
-                case 5:
-                {
-                    if (!down)
-                        break;
-                    wmmtGear++;
-                    if (wmmtGear > 6)
-                        wmmtGear = 6;
-                    updateGear();
-                    break;
-                }
-                case 6: {
-                    sendTouch = event.value != 0;
-                    break;
-                }
-                case 7: {
-                    serviceValue = event.value != 0;
-                    break;
-                }
-            }
-
-            printf("Button %u is %s\n", event.number, event.value == 0 ? "up" : "down");
-        }
-        else if (event.isAxis())
-        {
-            switch (event.number)
-            {
-                case 0:
-                { // left x
-                    float val = (float)event.value / 32767.f;
-                    analogBytes[0] = 128 + (val * 127.f);
-                    printf("steer %d\n", analogBytes[0]);
-                    break;
-                }
-                case 2:
-                { // left trigger
-                    float val = float(int(event.value) + 32768) / 65535.f;
-                    analogBytes[4] = val * 128.f;
-                    printf("brake %d\n", analogBytes[4]);
-                    break;
-                }
-                case 5:
-                { // right trigger
-                    float val = float(int(event.value) + 32768) / 65535.f;
-                    // analogBytes[2] = (1.f - val) * 255.f;
-                    analogBytes[2] = val * 128.f;
-                    printf("gas %d\n", analogBytes[2]);
-                    break;
-                }
-                case 6:
-                {
-                    if (event.value == -32767)
-                    { // left dpad down
-                        isLastRight = true;
-                        testSwitched = !testSwitched;
-                    }
-
-                    if (event.value == 32767)
-                    { // right dpad down
-                        isLastRight = true;
-                        wmmtGear = 0;
-                        updateGear();
-                        button1Pressed = true;
-                    }
-
-                    if (event.value == 0)
-                    {
-                        if (!isLastRight)
-                            break;
-                        isLastRight = false;
-
-                        printf("is right\n");
-                        wmmtGear = 0;
-                        updateGear();
-                        button1Pressed = false;
-                    }
-                    break;
-                }
-                case 7:
-                {
-                    if (event.value == -32767)
-                    { // up dpad down
-                        upPressed = true;
-                    }
-
-                    if (event.value == 32767)
-                    { // down dpad down
-                        downPressed = true;
-                    }
-
-                    if (event.value == 0)
-                    {
-                        upPressed = false;
-                        downPressed = false;
-                    }
-                    break;
-                }
-            }
-        }
-
-        // printf("Analog Bytes\nsteer %d\ngas %d\nbrakes %d\n", analogBytes[0], analogBytes[2], analogBytes[4]);
-    }
-
+    update_input();
+    update_jvs();
     jvsMutex.unlock();
+}
+
+void jvs_test(bool state) {
+    testSwitched = state;
+}
+
+void jvs_service(bool down) {
+    serviceValue = down;
+}
+
+void jvs_perspective(bool down) {
+    perspectiveSwitch = down;
+}
+
+void jvs_interrupt(bool down) {
+    interuptionSwitch = down;
+}
+
+void jvs_test_up(bool down) {
+    upPressed = down;
+}
+
+void jvs_test_down(bool down) {
+    downPressed = down;
+}
+
+void jvs_test_enter(bool down) {
+    if (down) {
+        wmmtGear = 0;
+        updateGear();
+        button1Pressed = true;
+    } else {
+        wmmtGear = 0;
+        updateGear();
+        button1Pressed = false;
+    }
+}
+
+void jvs_wheel(uint8_t value) {
+    analogBytes[0] = value;
+}
+
+void jvs_gas(uint8_t value) {
+    analogBytes[2] = value;
+}
+
+void jvs_brakes(uint8_t value) {
+    analogBytes[4] = value;
+}
+
+void jvs_gear(uint8_t gear) {
+    if (gear > 6)
+        gear = 6;
+    if (gear < 0)
+        gear = 0;
+    wmmtGear = gear;
+    updateGear();
+}
+
+void jvs_shift_up() {
+    if (wmmtGear > 6)
+        return;
+    wmmtGear++;
+    updateGear();
+}
+void jvs_shift_down() {
+    if (wmmtGear < 0)
+        return;
+    wmmtGear--;
+    updateGear();
 }

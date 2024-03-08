@@ -6,28 +6,33 @@
 uint32_t haspSize = 0xD40;
 uint8_t haspBuffer[0xD40];
 
-defineHook(int, hasp_login)
+defineHook(int, hasp_login, int a1, int a2, int* handle)
 {
+    printf("hasp_login\n");
     return 0;
 }
 
 defineHook(int, hasp_logout)
 {
+    printf("hasp_logout\n");
     return 0;
 }
 
 defineHook(int, hasp_encrypt)
 {
+    printf("hasp_encrypt\n");
     return 0;
 }
 
 defineHook(int, hasp_decrypt)
 {
+    printf("hasp_decrypt\n");
     return 0;
 }
 
 defineHook(int, hasp_get_size, int a1, int a2, int *a3)
 {
+    printf("hasp_get_size");
     *a3 = haspSize;
     return 0;
 }
@@ -74,18 +79,37 @@ void generateHaspDongleData(const std::string& serial)
 }
 
 void initHasp() {
-    if (isTerminal) {
-        generateHaspDongleData("267621542069"); // terminal
-    } else {
-        generateHaspDongleData("267620542069"); // drive
-    }
+    if (isMt4) {
 
-    enableHook(hasp_login, 0xa982740);
-    enableHook(hasp_login, 0xa982740);
-    enableHook(hasp_logout, 0xa9827e0);
-    enableHook(hasp_encrypt, 0xa9828cc);
-    enableHook(hasp_decrypt, 0xa9829b8);
-    enableHook(hasp_get_size, 0xa9836d0);
-    enableHook(hasp_read, 0xa983538);
-    enableHook(hasp_write, 0xa983604);
+        if (isTerminal) {
+            generateHaspDongleData("267611069420"); // terminal
+        } else {
+            generateHaspDongleData("267610069420"); // drive
+        }
+
+        enableHook(hasp_login, 0x8921FD0);
+        enableHook(hasp_get_size, 0x8922F60);
+        enableHook(hasp_encrypt, 0x892215C);
+
+        enableHook(hasp_logout, 0x89281f4);
+        enableHook(hasp_decrypt, 0x8922248);
+        enableHook(hasp_read, 0x8922DC8);
+        enableHook(hasp_write, 0x8922E94);
+
+    } else {
+
+        if (isTerminal) {
+            generateHaspDongleData("267621542069"); // terminal
+        } else {
+            generateHaspDongleData("267620542069"); // drive
+        }
+
+        enableHook(hasp_login, 0xa982740);
+        enableHook(hasp_logout, 0xa9827e0);
+        enableHook(hasp_encrypt, 0xa9828cc);
+        enableHook(hasp_decrypt, 0xa9829b8);
+        enableHook(hasp_get_size, 0xa9836d0);
+        enableHook(hasp_read, 0xa983538);
+        enableHook(hasp_write, 0xa983604);
+    }
 }

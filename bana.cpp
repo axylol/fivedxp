@@ -4,6 +4,8 @@
 #include "jvs.h"
 #include "config.h"
 
+bool cardEntered = false;
+
 defineHook(void, BngRwInit) {
     printf("BngRwInit\n");
 }
@@ -70,7 +72,7 @@ CardData* g_cardData = NULL;
 defineHook(int, BngRwReqWaitTouch, int c, int a2, uint32_t flags, void* callback, uint8_t* bn)
 {
     if (c == 0) {
-        if (!cardPressed)
+        if (!cardEntered)
             return -1;
 
         *(int*)(bn + 8) = 0;
@@ -87,17 +89,63 @@ defineHook(int, BngRwReset, int a1, int cb, uint8_t* bn) {
     return 1;
 }
 
+defineHook(int, bngRwAttachMt4, int a1, int a2, int a3, int a4, int cb, int d)
+{
+    printf("bngRwAttach\n");
+
+    *(int *)(d + 0x24) = 1;
+    *(int *)(d + 0x28) = 0;
+    return 1;
+}
+
+defineHook(int, bngRwReqLedMt4, int a1, int a2, int cb, int d)
+{
+    printf("bngRwReqLed\n");
+
+    *(int *)(d + 0x24) = 1;
+    *(int *)(d + 0x28) = 0;
+    return 1;
+}
+
+defineHook(int, bngRwResetMt4, int a1, int cb, int d)
+{
+    printf("bngRwReqReset\n");
+
+    *(int *)(d + 0x24) = 1;
+    *(int *)(d + 0x28) = 0;
+    return 1;
+}
+
+defineHook(int, bngRwWaitTouchMt4, int a1, int a2, int a3, int cb, uint8_t* bn)
+{
+    if (!cardEntered)
+        return 1;
+    printf("bngRwWaitTouch %p\n", (void *)bn);
+
+    *(int *)(bn + 0x24) = 1;
+    *(int *)(bn + 0x28) = 0;
+    memcpy(bn + 0x2c, g_cardData, sizeof(*g_cardData));
+    return 1;
+}
+
 void initBana() {
-    enableHook(BngRwInit, 0xAA62C34);
-    enableHook(BngRwAttach, 0xAA62764);
-    enableHook(BngRwIsCmdExec, 0x80EAD50);
-    enableHook(BngRwReqLed, 0xAA6200C);
-    enableHook(BngRwReqAction, 0xAA61DE6);
-    enableHook(BngRwReqBeep, 0xAA61EEC);
-    enableHook(BngRwReqCancel, 0xAA61A1A);
-    enableHook(BngRwReqSendUrlTo, 0xAA6236E);
-    enableHook(BngRwReqWaitTouch, 0xAA62116);
-    enableHook(BngRwReset, 0x0aa62248);
+    if (isMt4) {
+        enableHook(bngRwAttachMt4, 0x8AC3ECC);
+        enableHook(bngRwResetMt4, 0x8AC39B0);
+        enableHook(bngRwReqLedMt4, 0x8AC3774);
+        enableHook(bngRwWaitTouchMt4, 0x8AC387E);
+    } else {
+        enableHook(BngRwInit, 0xAA62C34);
+        enableHook(BngRwAttach, 0xAA62764);
+        enableHook(BngRwIsCmdExec, 0x80EAD50);
+        enableHook(BngRwReqLed, 0xAA6200C);
+        enableHook(BngRwReqAction, 0xAA61DE6);
+        enableHook(BngRwReqBeep, 0xAA61EEC);
+        enableHook(BngRwReqCancel, 0xAA61A1A);
+        enableHook(BngRwReqSendUrlTo, 0xAA6236E);
+        enableHook(BngRwReqWaitTouch, 0xAA62116);
+        enableHook(BngRwReset, 0x0aa62248);
+    }
 
     g_cardData = new CardData();
     if (!accessCode.empty())
@@ -105,4 +153,8 @@ void initBana() {
     if (!chipID.empty())
         memcpy(g_cardData->chipID, chipID.c_str(), chipID.size() + 1);
     memcpy(g_cardData->cardType, "NBGIC6", 6);
+}
+
+void bana_enter_card(bool state) {
+    cardEntered = state;
 }
