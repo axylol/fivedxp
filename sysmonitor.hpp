@@ -12,10 +12,12 @@ defineHook(mqd_t, mq_open, const char *name, int oflag, int mode, void* arg) {
     printf("mq_open %s\n", name);
 
     if (!redirectSysMonitor) {
-        if (strcmp(name, "/Sys.Monitor.Command") == 0)
-            return commandFd;
-        if (strcmp(name, "/Sys.Monitor.Reply") == 0)
-            return replyFd;
+        if (!isMt4) {
+            if (strcmp(name, "/Sys.Monitor.Command") == 0)
+                return commandFd;
+            if (strcmp(name, "/Sys.Monitor.Reply") == 0)
+                return replyFd;
+        }
     } else {
         if (strcmp(name, "/Sys.Monitor.Command") == 0) {
             commandFd = callOld(mq_open, "/sysmonitoremu.command2", O_WRONLY | O_NONBLOCK, 0, NULL);
@@ -26,7 +28,7 @@ defineHook(mqd_t, mq_open, const char *name, int oflag, int mode, void* arg) {
             return replyFd;
         }
     }
-    return -1;
+    return callOld(mq_open, name, oflag, mode, arg);
 }
 
 defineHook(int, mq_getattr, mqd_t fd, struct mq_attr *attr) {
