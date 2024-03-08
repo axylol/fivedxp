@@ -1,5 +1,5 @@
 # fivedxpl
-fivedxp linux loader (5dx+ 2.20.02 & 4 1.00.05)
+fivedxp linux loader (5dx+ 2.20.02 & 4 1.10.08)
 
 - currently only works with controllers
 - use a keyboard to controller software if you want to use keyboard

@@ -1,6 +1,7 @@
 {
   "terminal": false,
   "mt4": false,
+  "surround51": false,
   "sys_monitor": false,
   "access_code": "111",
   "chip_id": "222"

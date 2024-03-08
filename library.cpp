@@ -512,6 +512,9 @@ void initialize_wlldr() {
 
         if (config.contains("mt4"))
             isMt4 = config.at("mt4").get<bool>();
+
+        if (config.contains("surround51"))
+            useSurround51 = config.at("surround51").get<bool>();
     } catch (json::exception e) {
         f.close();
 
@@ -526,8 +529,10 @@ void initialize_wlldr() {
 
     initHasp();
     printf("hasp\n");
-    initNsadrv();
-    printf("nsadrv\n");
+    if (!useSurround51) {
+        initNsadrv();
+        printf("nsadrv\n");
+    }
     initSysMonitor();
     printf("monitor\n");
     initBana();
@@ -538,10 +543,9 @@ void initialize_wlldr() {
     printf("ssl\n");
 
     if (isMt4) {
-        //patchMemoryString0((void*)0x8c11004, "mucha.local");
+        patchMemoryString0((void*)0x8c11004, "mucha.local");
 
         enableHook(logmt4, 0x809ddb0);
-        enableHook(log, 0x80c6f70);
 
        if (isTerminal)
            enableHook(isTerminalMt4, 0x841BF00);

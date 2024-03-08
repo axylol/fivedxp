@@ -130,10 +130,10 @@ defineHook(int, bngRwWaitTouchMt4, int a1, int a2, int a3, int cb, uint8_t* bn)
 
 void initBana() {
     if (isMt4) {
-        enableHook(bngRwAttachMt4, 0x8ac3ecc);
-        enableHook(bngRwResetMt4, 0x8ac39b0);
-        enableHook(bngRwReqLedMt4, 0x88003F4);
-        enableHook(bngRwWaitTouchMt4, 0x8ac3774);
+        enableHook(bngRwAttachMt4, 0x8AC3ECC);
+        enableHook(bngRwResetMt4, 0x8AC39B0);
+        enableHook(bngRwReqLedMt4, 0x8AC3774);
+        enableHook(bngRwWaitTouchMt4, 0x8AC387E);
     } else {
         enableHook(BngRwInit, 0xAA62C34);
         enableHook(BngRwAttach, 0xAA62764);
