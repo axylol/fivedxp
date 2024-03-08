@@ -96,4 +96,25 @@ void writeJvs(void* packet, int size);
 bool readJvs(void* packet, int* size);
 void updateJvs();
 
-extern bool cardPressed;
+void jvs_test(bool state);
+void jvs_service(bool down);
+
+void jvs_perspective(bool down);
+void jvs_interrupt(bool down);
+
+void jvs_test_up(bool down);
+void jvs_test_down(bool down);
+void jvs_test_enter(bool down);
+
+// 0 - 254
+void jvs_wheel(uint8_t value);
+
+// 0 - 128
+void jvs_gas(uint8_t value);
+
+// 0 - 128
+void jvs_brakes(uint8_t value);
+
+void jvs_gear(uint8_t gear);
+void jvs_shift_up();
+void jvs_shift_down();

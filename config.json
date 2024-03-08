@@ -1,6 +1,6 @@
 {
   "terminal": false,
-  "online": false,
+  "sys_monitor": false,
   "access_code": "111",
   "chip_id": "222"
 }

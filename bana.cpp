@@ -4,6 +4,8 @@
 #include "jvs.h"
 #include "config.h"
 
+bool cardEntered = false;
+
 defineHook(void, BngRwInit) {
     printf("BngRwInit\n");
 }
@@ -70,7 +72,7 @@ CardData* g_cardData = NULL;
 defineHook(int, BngRwReqWaitTouch, int c, int a2, uint32_t flags, void* callback, uint8_t* bn)
 {
     if (c == 0) {
-        if (!cardPressed)
+        if (!cardEntered)
             return -1;
 
         *(int*)(bn + 8) = 0;
@@ -105,4 +107,8 @@ void initBana() {
     if (!chipID.empty())
         memcpy(g_cardData->chipID, chipID.c_str(), chipID.size() + 1);
     memcpy(g_cardData->cardType, "NBGIC6", 6);
+}
+
+void bana_enter_card(bool state) {
+    cardEntered = state;
 }

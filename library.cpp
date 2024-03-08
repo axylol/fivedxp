@@ -20,12 +20,11 @@
 #include <dlfcn.h>
 #include <sys/epoll.h>
 #include <sys/uio.h>
-#include <vector>
-#include <sys/mman.h>
 #include <fstream>
 #include "json.hpp"
 #include "memory.h"
 #include "ssl.hpp"
+#include "input.h"
 
 using namespace nlohmann;
 
@@ -33,9 +32,10 @@ int jvsFd = 144444443;
 int touchFd = 144444444;
 
 void jvsThread() {
+    init_input();
     initJvs();
 
-    while (true) {
+    while (!inputStopped) {
         updateJvs();
         usleep(1 * 1000);
     }
@@ -364,6 +364,18 @@ defineHook(ssize_t, recvmsg, int fd, struct msghdr *msg, int flags) {
     return ret;
 }
 
+defineHook(int, alin0) {
+    return 0;
+}
+
+defineHook(int, sendAlthmand) {
+    return 0;
+}
+
+defineHook(int, XCreatePixmapCursor) {
+    return 0;
+}
+
 defineHook(ssize_t, sendmsg, int fd, struct msghdr *msg, int flags) {
     if (msg->msg_name) {
         struct sockaddr_in* in = ((struct sockaddr_in*) msg->msg_name);
@@ -383,25 +395,13 @@ void initialize_wlldr() {
         return;
     }
 
-    std::string constr = "";
-    std::string line;
-    while (std::getline(f, line))
-        constr += line + "\n";
-
-    f.close();
-
-    printf("%s\n", constr.c_str());
-
     try {
-        json config = json::parse(constr);
-
-        printf("%s\n", config.dump().c_str());
+        json config = json::parse(f);
+        f.close();
 
         isTerminal = config.at("terminal").get<bool>();
 
-        if (config.contains("online") && config.at("online").get<bool>()) {
-            isOnline = true;
-
+        if (config.contains("access_code") && config.contains("chip_id")) {
             // crashses if i do accessCode = config
             std::string acc = config.at("access_code").get<std::string>();
             std::string cip = config.at("chip_id").get<std::string>();
@@ -409,6 +409,9 @@ void initialize_wlldr() {
             accessCode = acc;
             chipID = cip;
         }
+
+        if (config.contains("sys_monitor"))
+            redirectSysMonitor = true;
     } catch (json::exception e) {
         f.close();
 
@@ -424,26 +427,19 @@ void initialize_wlldr() {
     initHasp();
     initNsadrv();
     initSysMonitor();
+    initBana();
 
-    if (isOnline) {
-        initBana();
+    // disable ssl verification for mucha
+    disableSSLCert();
 
-        // disable ssl verification for mucha
-        disableSSLCert();
-
-        patchMemoryString0((void*)0xaafaa88, "mucha.local");
-        //patchMemory((void*)0x81de9fc, { 0x66, 0xc7, 0x85, 0x62, 0xfe, 0xff, 0xff, 0xBB, 0x01 });
-        enableHook(decryptToken, 0xAA77780);
-    } else {
-        // dont connect to mucha
-        patchMemoryString0((void*)0xaafaa88, "localhost");
-    }
+    patchMemoryString0((void*)0xaafaa88, "mucha.local");
+    //patchMemory((void*)0x81de9fc, { 0x66, 0xc7, 0x85, 0x62, 0xfe, 0xff, 0xff, 0xBB, 0x01 });
+    enableHook(decryptToken, 0xAA77780);
 
     if (isTerminal)
         ourPcb = 4;
     enableHook(recvmsg, recvmsg);
     enableHook(sendmsg, sendmsg);
-
 
     enableHook(system, system);
 
@@ -488,6 +484,18 @@ void initialize_wlldr() {
 
     // dont save billing = dont crash
     enableHook(billingSave, 0x8401A70);
+
+    void *alin_dll = dlopen("./alin.dll", 2);
+    enableHook(alin0, dlsym(alin_dll, "alin_init"));
+    enableHook(alin0, dlsym(alin_dll, "alin_keyboard"));
+    enableHook(alin0, dlsym(alin_dll, "alin_mouse"));
+    enableHook(alin0, dlsym(alin_dll, "alin_pad"));
+    enableHook(alin0, dlsym(alin_dll, "alin_term"));
+
+    enableHook(sendAlthmand, 0xa851320);
+
+    // dont hide cursor
+    enableHook(XCreatePixmapCursor, dlsym(dlopen("libX11.so.6", 2),"XCreatePixmapCursor"));
 
     std::thread t(jvsThread);
     t.detach();
