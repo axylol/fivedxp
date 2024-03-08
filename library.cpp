@@ -52,7 +52,7 @@ defineHook(int, system, const char* command) {
 }
 
 defineHook(int, open, const char *pathname, int flags, ...) {
-    //printf("open(\"%s\", %d)\n", pathname, flags);
+    printf("open(\"%s\", %d)\n", pathname, flags);
 
     int mode = 0;
     bool twoArgs = true;
@@ -292,7 +292,7 @@ defineHook(int, isTerminal)
 
 defineHook(int, isTerminalMt4, int* a1)
 {
-    a1[1] = 0x8365070;
+    a1[1] = 0x841B840;
     return 0;
 }
 
@@ -390,7 +390,7 @@ defineHook(ssize_t, recvmsg, int fd, struct msghdr *msg, int flags) {
 
         uint8_t* data = (uint8_t*)msg->msg_iov->iov_base;
         if (port == 50765 && msg->msg_iov->iov_len >= 2) {
-            if (data[0] == isMt4 ? 0 : 2) {
+            if (data[0] == isMt4 ? 1 : 2) {
                 //printf("%d %d\n", data[1], ourPcb);
                 if (data[1] != ourPcb) {
                     switch (data[1]) {
@@ -453,7 +453,7 @@ defineHook(ssize_t, sendmsg, int fd, struct msghdr *msg, int flags) {
         int port = ntohs(in->sin_port);
         if (port == 50765 && msg->msg_iov->iov_len >= 2) {
             uint8_t* data = (uint8_t*)msg->msg_iov->iov_base;
-            if (data[0] == isMt4 ? 0 : 2) {
+            if (data[0] == isMt4 ? 1 : 2) {
                 ourPcb = data[1];
             }
         }
@@ -479,7 +479,7 @@ defineHook(int, str400Receive, int a1, int* a2) {
 defineHook(int, str400_reset_status_wait, int* param1) {
     printf("str400_reset_status_wait\n");
 
-    *param1 = 0x82D5BC0; // 0
+    *param1 = 0x835e5c0; // 0
     param1[1] = 0; // 4
     return 1;
 }
@@ -534,27 +534,27 @@ void initialize_wlldr() {
     printf("bana\n");
 
     // disable ssl verification for mucha
-   // disableSSLCert();
+    disableSSLCert();
     printf("ssl\n");
 
     if (isMt4) {
-        patchMemoryString0((void*)0x8c11004, "mucha.local");
+        //patchMemoryString0((void*)0x8c11004, "mucha.local");
 
-        enableHook(logmt4, 0x808B6B0);
-        enableHook(log, 0x80BCA60);
+        enableHook(logmt4, 0x809ddb0);
+        enableHook(log, 0x80c6f70);
 
-
-        if (isTerminal)
-            enableHook(isTerminalMt4, 0x83665D0);
+       if (isTerminal)
+           enableHook(isTerminalMt4, 0x841BF00);
 
         // content router fix
-        enableHook(refreshNetwork, 0x81BF4F0);
-        patchMemory((void*)0x80912bd, { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 });
+        enableHook(refreshNetwork, 0x821D4F0);
 
-        enableHook(sendAlthmand, 0x89e5c80);
+        patchMemory((void*)0x80a0920, { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 });
 
-        enableHook(str400_reset_status_wait, 0x82D8A00);
-        enableHook(str400Receive, 0x82E8520);
+        enableHook(sendAlthmand, 0x89E5C80);
+
+        enableHook(str400_reset_status_wait, 0x8361450);
+        enableHook(str400Receive, 0x8371440);
 
         // TODO: resolution fix
         //enableHook(createWindowMt4, 0x86F8680);
