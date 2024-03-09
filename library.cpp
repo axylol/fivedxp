@@ -508,7 +508,7 @@ void initialize_wlldr() {
         }
 
         if (config.contains("sys_monitor"))
-            redirectSysMonitor = true;
+            redirectSysMonitor = config.at("sys_monitor").get<bool>();
 
         if (config.contains("mt4")) {
 
