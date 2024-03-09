@@ -6,7 +6,6 @@
 #include "touch.h"
 #include "config.h"
 
-bool sendTouch = false;
 bool touchReady = false;
 
 void initTouch() {
@@ -17,6 +16,11 @@ int8_t touchBuffer[5];
 
 uint8_t touchOk[3] = { 0x01, 0x30, 0x0d };
 
+
+bool touchPressed = false;
+bool lastTouchPressed = false;
+int touchX, touchY;
+
 int touchOkResponse = 0;
 void writeTouch(void* packet, int size) {
     uint8_t* data = (uint8_t*)packet;
@@ -24,6 +28,8 @@ void writeTouch(void* packet, int size) {
         if (data[1] == 68) {
             printf("touch should be ready\n");
             touchReady = true;
+            touchPressed = false;
+            lastTouchPressed = false;
         }
         if (data[1] == 82) {
             printf("reset touch\n");
@@ -33,29 +39,41 @@ void writeTouch(void* packet, int size) {
     touchOkResponse++;
 }
 
+void update_touch(bool state, int x, int y) {
+    touchPressed = state;
+    touchBuffer[1] = x & 0x7f;
+    touchBuffer[2] = (x / 0x80) & 0x7f;
+    touchBuffer[3] = y & 0x7f;
+    touchBuffer[4] = ( y / 0x80) & 0x7f;
+}
+
 bool readTouch(void* packet, int* size) {
     if (isMt4) {
-        // not sure how to deal with this yet
-        memcpy(packet, touchOk, 3);
-        *size = 3;
-        return true;
-    }
+        if (touchReady) {
+            bool sendTouch = false;
+            if (!touchPressed) {
+                if (lastTouchPressed) {
+                    touchBuffer[0] = -128;
+                    sendTouch = true;
+                    lastTouchPressed = false;
+                }
+            } else {
+                touchBuffer[0] = -64;
+                lastTouchPressed = true;
+                sendTouch = true;
+            }
 
-    if (touchOkResponse < 1) {
-        if (!touchReady)
-            return false;
-        if (sendTouch) {
-            int touchX = rand() % 1000;
-            int touchY = rand() % 720;
+            if (sendTouch) {
+                memcpy(packet, touchBuffer, 5);
+                *size = 5;
+                return true;
+            }
+        }
 
-            touchBuffer[0] = -128;
-            touchBuffer[1] = touchX & 0x7f;
-            touchBuffer[2] = (touchX / 0x80) & 0x7f;
-            touchBuffer[3] = touchY & 0x7f;
-            touchBuffer[4] = (touchY / 0x80) & 0x7f;
-
-            memcpy(packet, touchBuffer, 5);
-            *size = 5;
+        if (isMt4) {
+            // not sure how to deal with this yet
+            memcpy(packet, touchOk, 3);
+            *size = 3;
             return true;
         }
 

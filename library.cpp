@@ -435,18 +435,6 @@ defineHook(int, XCreatePixmapCursor) {
     return 0;
 }
 
-defineHook(int, createWindowMt4, int a1) {
-    *(int*)(a1 + 28) = 1360;
-    *(int*)(a1 + 32) = 768;
-    return callOld(createWindowMt4, a1);
-}
-defineHook(int, createDisplayMt4, int a1) {
-    int ret = callOld(createDisplayMt4, a1);
-    *(int*)(a1 + 16) = 1360;
-    *(int*)(a1 + 20) = 768;
-    return ret;
-}
-
 defineHook(Status, XGetWindowAttributes, Display *display, Window w, XWindowAttributes *window_attributes_return) {
     Status ret = callOld(XGetWindowAttributes, display, w, window_attributes_return);
     window_attributes_return->width = 1360;
@@ -571,7 +559,6 @@ void initialize_wlldr() {
         enableHook(str400Receive, 0x8371440);
 
         // fix resolution
-        enableHook(createWindowMt4, 0x89B8680);
         enableHook(XGetWindowAttributes, dlsym(dlopen("libX11.so.6", 2),"XGetWindowAttributes"));
     } else {
         patchMemoryString0((void*)0xaafaa88, "mucha.local");
