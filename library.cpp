@@ -252,7 +252,7 @@ defineHook(void, log, void* a1, int type, const char* msg, ...) {
             break;
         }
     }
-    printf("%s\n", logBuffer);
+    printf("%s", logBuffer);
 }
 
 defineHook(void, logmt4, int type, const char* msg, ...) {
@@ -277,7 +277,7 @@ defineHook(void, logmt4, int type, const char* msg, ...) {
             break;
         }
     }
-    printf("%s\n", logBuffer);
+    printf("%s", logBuffer);
 }
 
 defineHook(int, getContentRouter)
@@ -447,6 +447,13 @@ defineHook(int, createDisplayMt4, int a1) {
     return ret;
 }
 
+defineHook(Status, XGetWindowAttributes, Display *display, Window w, XWindowAttributes *window_attributes_return) {
+    Status ret = callOld(XGetWindowAttributes, display, w, window_attributes_return);
+    window_attributes_return->width = 1360;
+    window_attributes_return->height = 768;
+    return ret;
+}
+
 defineHook(ssize_t, sendmsg, int fd, struct msghdr *msg, int flags) {
     if (msg->msg_name) {
         struct sockaddr_in* in = ((struct sockaddr_in*) msg->msg_name);
@@ -563,8 +570,9 @@ void initialize_wlldr() {
         enableHook(str400_reset_status_wait, 0x8361450);
         enableHook(str400Receive, 0x8371440);
 
-        // TODO: resolution fix
-        //enableHook(createWindowMt4, 0x86F8680);
+        // fix resolution
+        enableHook(createWindowMt4, 0x89B8680);
+        enableHook(XGetWindowAttributes, dlsym(dlopen("libX11.so.6", 2),"XGetWindowAttributes"));
     } else {
         patchMemoryString0((void*)0xaafaa88, "mucha.local");
         //patchMemory((void*)0x81de9fc, { 0x66, 0xc7, 0x85, 0x62, 0xfe, 0xff, 0xff, 0xBB, 0x01 }); // port 443 mucha patch
