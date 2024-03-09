@@ -118,13 +118,16 @@ defineHook(int, bngRwResetMt4, int a1, int cb, int d)
 
 defineHook(int, bngRwWaitTouchMt4, int a1, int a2, int a3, int cb, uint8_t* bn)
 {
-    if (!cardEntered)
-        return 1;
+    if (!cardEntered) { // super hacky solution plz fix me
+        *(int*)(bn + 12) = 0x836EDE0;
+        *(int*)(bn + 220) = *(int*)0x9213994; // dont timeout
+        return 0;
+    }
     printf("bngRwWaitTouch %p\n", (void *)bn);
 
-    *(int *)(bn + 0x24) = 1;
-    *(int *)(bn + 0x28) = 0;
-    memcpy(bn + 0x2c, g_cardData, sizeof(*g_cardData));
+    *(int *)(bn + 36) = 1;
+    *(int *)(bn + 40) = 0;
+    memcpy(bn + 44, g_cardData, sizeof(*g_cardData));
     return 1;
 }
 
