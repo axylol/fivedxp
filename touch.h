@@ -1,6 +1,6 @@
 #pragma once
 
-extern bool sendTouch;
+void update_touch(bool state, int x, int y);
 
 void initTouch();
 void writeTouch(void* packet, int size);

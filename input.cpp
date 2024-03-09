@@ -8,6 +8,8 @@
 #include <X11/Xutil.h>
 #include <dlfcn.h>
 #include "hook.h"
+#include "config.h"
+#include "touch.h"
 
 SDL_GameControllerButton ctrlKeybindTestSwitch = SDL_CONTROLLER_BUTTON_DPAD_LEFT;
 SDL_GameControllerButton ctrlKeybindTestUp = SDL_CONTROLLER_BUTTON_DPAD_UP;
@@ -46,17 +48,26 @@ bool testState = false;
 
 bool inputStopped = false;
 
+Display* display = NULL;
+Window window = 0;
+
 defineHook(int, initWindow, int a1) {
     int ret = callOld(initWindow, a1);
     if (ret == 0) {
-        auto display = *(Display**)(a1 + 4);
-        auto window = *(Window*)(a1 + 12);
+        display = *(Display**)(a1 + 4);
+        window = *(Window*)(a1 + 12);
+
+        XSelectInput(display, window, ButtonPressMask | ButtonReleaseMask);
     }
     return ret;
 }
 
 void init_input() {
-    // mt5 addr enableHook(initWindow, 0xa824460);
+    if (isMt4) {
+        enableHook(initWindow, 0x89B8680);
+    } else {
+        enableHook(initWindow, 0xa824460);
+    }
 
     SDL_SetMainReady();
 
@@ -82,6 +93,26 @@ void init_input() {
 float maxAxis = SDL_JOYSTICK_AXIS_MAX -1 ;
 
 void update_input() {
+    if (display != NULL) {
+        XEvent e;
+        while (XPending(display))
+        {
+            XNextEvent(display, &e);
+
+            //TODO: add keyboard events
+            // https://tronche.com/gui/x/xlib/events/types.html
+            switch (e.type)
+            {
+                case ButtonPress:
+                case ButtonRelease: {
+                    bool down = e.type == ButtonPress;
+                    update_touch(down, e.xbutton.x, e.xbutton.y);
+                    break;
+                }
+            }
+        }
+    }
+
     SDL_Event event;
     while (SDL_PollEvent(&event) != 0) {
 
@@ -165,6 +196,15 @@ void update_input() {
                 if (button == ctrlKeybindCard)
                     bana_enter_card(down);
 
+                break;
+            }
+
+            case SDL_MOUSEMOTION: {
+                printf("mouse motion\n");
+                break;
+            }
+            case SDL_MOUSEBUTTONUP: {
+                printf("mouse up\n");
                 break;
             }
 
