@@ -511,9 +511,6 @@ void initialize_wlldr() {
             chipID = cip;
         }
 
-        if (config.contains("sys_monitor"))
-            redirectSysMonitor = config.at("sys_monitor").get<bool>();
-
         if (config.contains("mt4")) {
 
 
