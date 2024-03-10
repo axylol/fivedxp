@@ -488,6 +488,13 @@ defineHook(int, str400_reset_status_wait, int* param1) {
     return 1;
 }
 
+defineHook(void, updateJvs5dxp, int a1) {
+    int timer = *(int *)(a1 + 20);
+    if (timer > 0x4AF)
+        *(int *)(a1 + 20) = 0x4AF;
+    callOld(updateJvs5dxp, a1);
+}
+
 __attribute__((constructor))
 void initialize_wlldr() {
     std::ifstream f("./config.json");
@@ -495,6 +502,8 @@ void initialize_wlldr() {
         printf("can't open file config.json\n");
         return;
     }
+
+    bool noJvsTimeout5dxp = false;
 
     try {
         json config = json::parse(f);
@@ -516,6 +525,9 @@ void initialize_wlldr() {
 
         if (config.contains("surround51"))
             useSurround51 = config.at("surround51").get<bool>();
+
+        if (config.contains("no_jvs_timeout_5dxp"))
+            noJvsTimeout5dxp = config.at("no_jvs_timeout_5dxp").get<bool>();
     } catch (json::exception e) {
         f.close();
 
@@ -598,6 +610,10 @@ void initialize_wlldr() {
         enableHook(sendAlthmand, 0xa851320);
 
         enableHook(XOpenDisplay, 0x805504c);
+
+        // whats a byte patch?
+        if (noJvsTimeout5dxp)
+            enableHook(updateJvs5dxp, 0x80F0B40);
     }
 
     if (isTerminal)
