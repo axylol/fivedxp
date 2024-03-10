@@ -34,6 +34,7 @@ int strFd = 144444445;
 
 #include <GL/gl.h>
 #include <GL/glx.h>
+#include <sys/stat.h>
 
 
 void jvsThread() {
@@ -53,6 +54,8 @@ defineHook(int, system, const char* command) {
     return -1;
 }
 
+#define YA_CARD_EMU_FIFO "/tmp/yacardemu-mt4"
+
 defineHook(int, open, const char *pathname, int flags, ...) {
     //printf("open(\"%s\", %d)\n", pathname, flags);
 
@@ -71,6 +74,9 @@ defineHook(int, open, const char *pathname, int flags, ...) {
     if (strstr(pathname, "/dev/tty") == pathname) {
         printf("open(\"%s\", %d)\n", pathname, flags);
     }
+
+    if (isMt4 && strcmp(pathname, "/dev/ttyS1") == 0 && !redirectMagneticCard.empty())
+        return callOld(open, redirectMagneticCard.c_str(), flags);
 
     if (strcmp(pathname, "/dev/ttyS2") == 0)
         return jvsFd;
@@ -113,10 +119,8 @@ defineHook(int, ioctl, int fd, unsigned long request) {
         }
         return 0;
     }
-
     if (fd == touchFd)
         return 0;
-
     if (fd == strFd)
         return 0;
 
@@ -133,6 +137,8 @@ defineHook(int, fcntl, int fd, int cmd, void* arg) {
 
 defineHook(int, fcntl64, int fd, int cmd, void* arg) {
     if (fd == touchFd)
+        return 0;
+    if (fd == strFd)
         return 0;
     return callOld(fcntl, fd, cmd, arg);
 }
@@ -522,6 +528,11 @@ void initialize_wlldr() {
 
             accessCode = acc;
             chipID = cip;
+
+            if (config.contains("redirect_magnetic_card")) {
+                std::string rdmc = config.at("redirect_magnetic_card").get<std::string>();
+                redirectMagneticCard = rdmc;
+            }
         }
 
         if (config.contains("mt4"))
