@@ -511,11 +511,8 @@ void initialize_wlldr() {
             chipID = cip;
         }
 
-        if (config.contains("mt4")) {
-
-
+        if (config.contains("mt4"))
             isMt4 = config.at("mt4").get<bool>();
-        }
 
         if (config.contains("surround51"))
             useSurround51 = config.at("surround51").get<bool>();

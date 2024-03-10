@@ -68,12 +68,41 @@ defineHook(int, updateSysMonitorMt4, int a1, int a2) {
     return callOld(updateSysMonitorMt4, a1, a2);
 }
 
+defineHook(int, updateSysMonitorMt5dxp, int a1, int a2) {
+    int type = *(int*)(a1 + 544);
+
+    if (type == 0) {
+        type = 1;
+    } else if (type == 1) { // checking cable
+        type = 2;
+        *(int*)(a1 + 476) = 3; // cable is good
+    } else if (type == 3) {
+        *(int*)(a1 + 480) = 3; // gateway is good
+    } else if (type == 4) {
+        *(int*)(a1 + 376) = 3; // checking shop router
+    } else if (type == 5) {
+        *(int*)(a1 + 500) = 1;
+        *(int*)(a1 + 492) = 3; // shop router hops = 1
+    } else if (type == 7) { // ntp
+        *(int*)(a1 + 472) = 3;
+    } else if (type == 14) { // online network check
+        *(int*)(a1 + 508) = 0;
+    } else if (type == 15) {
+        *(int*)(a1 + 476) = 0;
+    }else if (type == 16) {
+        *(int*)(a1 + 516) = 0;
+    }
+
+    *(int*)(a1 + 544) = type;
+
+    return callOld(updateSysMonitorMt5dxp, a1, a2);
+}
 
 void initSysMonitor() {
     if (isMt4) {
         enableHook(updateSysMonitorMt4, 0x80A9B70);
     } else {
-        // TODO: 5dx+ before release please
+        enableHook(updateSysMonitorMt5dxp, 0x8288040);
     }
 
     enableHook(mq_open, mq_open);
