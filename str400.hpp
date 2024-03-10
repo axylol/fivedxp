@@ -132,7 +132,6 @@ void init_str400() {
         enableHook(str400Send, 0x83713D0);
         enableHook(str400Receive, 0x8371440);
     } else {
-
         enableHook(str400Send5dxp, 0x80EEFC0);
         enableHook(str400Receive5dxp, 0x80EEF50);
     }

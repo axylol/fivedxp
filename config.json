@@ -5,7 +5,7 @@
   "access_code": "111",
   "chip_id": "222",
   "jvs": true,
-  "str400": false,
+  "str400": true,
   "str3": false,
   "touch": true,
   "redirect_magnetic_card": ""
