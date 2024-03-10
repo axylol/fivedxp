@@ -442,6 +442,10 @@ defineHook(Status, XGetWindowAttributes, Display *display, Window w, XWindowAttr
     return ret;
 }
 
+defineHook(Display*, XOpenDisplay, char* name) {
+    return callOld(XOpenDisplay, NULL);
+}
+
 defineHook(ssize_t, sendmsg, int fd, struct msghdr *msg, int flags) {
     if (msg->msg_name) {
         struct sockaddr_in* in = ((struct sockaddr_in*) msg->msg_name);
@@ -592,6 +596,8 @@ void initialize_wlldr() {
 
         enableHook(sendAlthmand, 0xa851320);
     }
+
+    enableHook(XOpenDisplay, dlsym(dlopen("libX11.so.6", 2),"XOpenDisplay"));
 
     if (isTerminal)
         ourPcb = 4;
