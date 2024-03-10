@@ -31,6 +31,7 @@ fivedxp linux loader (5dx+ 2.20.02 & 4 1.10.08)
 - ```./start.sh```
 
 # TODO
+- fix sound getting muted sometimes
 - rewrite jvs
 - proper terminal fix for 5dxp
 

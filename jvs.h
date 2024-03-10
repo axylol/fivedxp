@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <mutex>
 
 #define JVS_MAX_PACKET_SIZE 516
 
@@ -118,3 +119,6 @@ void jvs_brakes(uint8_t value);
 void jvs_gear(uint8_t gear);
 void jvs_shift_up();
 void jvs_shift_down();
+
+
+extern std::mutex jvsMutex;

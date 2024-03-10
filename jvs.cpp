@@ -830,10 +830,7 @@ bool readJvs(void* packet, int* size) {
 
 void updateJvs()
 {
-    jvsMutex.lock();
-    update_input();
     update_jvs();
-    jvsMutex.unlock();
 }
 
 void jvs_test(bool state) {
