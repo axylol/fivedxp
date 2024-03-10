@@ -25,12 +25,15 @@
 #include "memory.h"
 #include "ssl.hpp"
 #include "input.h"
+#include "str400.hpp"
 
 using namespace nlohmann;
 
 int jvsFd = 144444443;
 int touchFd = 144444444;
 int strFd = 144444445;
+
+int ffbState = 0;
 
 #include <GL/gl.h>
 #include <GL/glx.h>
@@ -78,15 +81,18 @@ defineHook(int, open, const char *pathname, int flags, ...) {
     if (isMt4 && strcmp(pathname, "/dev/ttyS1") == 0 && !redirectMagneticCard.empty())
         return callOld(open, redirectMagneticCard.c_str(), flags);
 
-    if (strcmp(pathname, "/dev/ttyS2") == 0)
+    if ((strcmp(pathname, "/dev/ttyS2") == 0 || strcmp(pathname, "/dev/tnt0") == 0) && useJvs)
         return jvsFd;
 
     if (strcmp(pathname, "/dev/ttyS0") == 0) {
         if (isTerminal) {
-            initTouch();
-            return touchFd;
+            if (useTouch) {
+                initTouch();
+                return touchFd;
+            }
+        } else if (useStr3) {
+            return strFd;
         }
-        return strFd;
     }
 
     if(twoArgs)
@@ -186,8 +192,28 @@ defineHook(int, read, int fd, void* buf, size_t count) {
     }
 
     if (fd == strFd) {
-        errno = EINVAL;
-        return -1;
+        switch (ffbState) {
+            case 1: {
+                memcpy(buf, "C01", 3);
+                ffbState = 3;
+                return 3;
+            }
+            case 2: {
+                memcpy(buf, "C06", 3);
+                ffbState = 0;
+                return 3;
+            }
+            case 3: {
+                ((char*)buf)[0] = 'H';
+
+                int v = htons(0);
+                memcpy((uint8_t*)buf + 1, &v, 2);
+
+                return 3;
+            }
+        }
+
+        return 0;
     }
 
     if (fd == touchFd) {
@@ -210,8 +236,10 @@ defineHook(int, write, int fd, const void* buf, size_t count) {
         return count;
     }
 
-    if (fd == strFd)
+    if (fd == strFd) {
+        // TODO: handle steering packet for ffb
         return count;
+    }
 
     if (fd == touchFd) {
         writeTouch((void*)buf, count);
@@ -494,17 +522,18 @@ defineHook(int, refreshNetwork, int a1) {
     return 1;
 }
 
-defineHook(int, str400Receive, int a1, int* a2) {
-    *a2 = 0;
-    return 0;
+defineHook(int, FFBIo_State_PowerOn, int a1) {
+    printf("[FFBIo] PowerOn\n");
+
+    ffbState = 1;
+    return callOld(FFBIo_State_PowerOn, a1);
 }
 
-defineHook(int, str400_reset_status_wait, int* param1) {
-    printf("str400_reset_status_wait\n");
+defineHook(int, FFBIo_State_PowerOff, int a1) {
+    printf("[FFBIo] PowerOff\n");
 
-    *param1 = 0x835e5c0; // 0
-    param1[1] = 0; // 4
-    return 1;
+    ffbState = 2;
+    return callOld(FFBIo_State_PowerOff, a1);
 }
 
 __attribute__((constructor))
@@ -528,11 +557,6 @@ void initialize_wlldr() {
 
             accessCode = acc;
             chipID = cip;
-
-            if (config.contains("redirect_magnetic_card")) {
-                std::string rdmc = config.at("redirect_magnetic_card").get<std::string>();
-                redirectMagneticCard = rdmc;
-            }
         }
 
         if (config.contains("mt4"))
@@ -540,6 +564,20 @@ void initialize_wlldr() {
 
         if (config.contains("surround51"))
             useSurround51 = config.at("surround51").get<bool>();
+
+        if (config.contains("jvs"))
+            useJvs = config.at("jvs").get<bool>();
+        if (config.contains("str400"))
+            useStr400 = config.at("str400").get<bool>();
+        if (config.contains("str3"))
+            useStr3 = config.at("str3").get<bool>();
+        if (config.contains("touch"))
+            useTouch = config.at("touch").get<bool>();
+
+        if (config.contains("redirect_magnetic_card")) {
+            std::string rdmc = config.at("redirect_magnetic_card").get<std::string>();
+            redirectMagneticCard = rdmc;
+        }
     } catch (json::exception e) {
         f.close();
 
@@ -562,6 +600,10 @@ void initialize_wlldr() {
     printf("monitor\n");
     initBana();
     printf("bana\n");
+    if (useStr400) {
+        init_str400();
+        printf("str400\n");
+    }
 
     // disable ssl verification for mucha
     disableSSLCert();
@@ -582,13 +624,13 @@ void initialize_wlldr() {
 
         enableHook(sendAlthmand, 0x89E5C80);
 
-        enableHook(str400_reset_status_wait, 0x8361450);
-        enableHook(str400Receive, 0x8371440);
-
         // fix resolution
         enableHook(XGetWindowAttributes, XGetWindowAttributes);
 
         enableHook(XOpenDisplay, 0x8057d28);
+
+        enableHook(FFBIo_State_PowerOn, 0x8369CD0);
+        enableHook(FFBIo_State_PowerOff, 0x8369BB0);
     } else {
         patchMemoryString0((void*)0xaafaa88, "mucha.local");
         //patchMemory((void*)0x81de9fc, { 0x66, 0xc7, 0x85, 0x62, 0xfe, 0xff, 0xff, 0xBB, 0x01 }); // port 443 mucha patch
@@ -622,6 +664,9 @@ void initialize_wlldr() {
         enableHook(sendAlthmand, 0xa851320);
 
         enableHook(XOpenDisplay, 0x805504c);
+
+        enableHook(FFBIo_State_PowerOn, 0x80DFD50);
+        enableHook(FFBIo_State_PowerOff, 0x80DFCC0);
     }
 
     if (isTerminal)

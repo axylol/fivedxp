@@ -5,3 +5,7 @@ std::string accessCode, chipID;
 bool isMt4 = false;
 bool useSurround51 = false;
 std::string redirectMagneticCard;
+bool useJvs = true;
+bool useStr400 = false;
+bool useStr3 = false;
+bool useTouch = true;

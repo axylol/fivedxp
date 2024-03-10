@@ -14,6 +14,7 @@ add_library(fivedxp SHARED library.cpp
         config.cpp
         memory.cpp
         input.cpp
+        str400.hpp
 )
 
 target_link_libraries(fivedxp ${CMAKE_SOURCE_DIR}/libdobby.a SDL2)
