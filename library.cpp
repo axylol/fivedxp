@@ -41,7 +41,9 @@ void jvsThread() {
     initJvs();
 
     while (!inputStopped) {
-        updateJvs();
+        jvsMutex.lock();
+        update_input();
+        jvsMutex.unlock();
         usleep(1 * 1000);
     }
 }
@@ -164,9 +166,16 @@ defineHook(int, epoll_ctl, int epfd, int op, int fd, struct epoll_event *event) 
 
 defineHook(int, read, int fd, void* buf, size_t count) {
     if (fd == jvsFd) {
+        jvsMutex.lock();
+        updateJvs();
+        jvsMutex.unlock();
+
         int size;
-        if (!readJvs(buf, &size))
-            return 0;
+        if (!readJvs(buf, &size)) {
+            printf("no packet jvs\n");
+            errno = EINVAL;
+            return -1;
+        }
         return size;
     }
 
@@ -188,6 +197,10 @@ defineHook(int, read, int fd, void* buf, size_t count) {
 defineHook(int, write, int fd, const void* buf, size_t count) {
     if (fd == jvsFd) {
         writeJvs((void*)buf, count);
+
+        jvsMutex.lock();
+        updateJvs();
+        jvsMutex.unlock();
         return count;
     }
 
@@ -442,6 +455,15 @@ defineHook(Status, XGetWindowAttributes, Display *display, Window w, XWindowAttr
     return ret;
 }
 
+defineHook(Display*, XOpenDisplay, char* name) {
+    Display* ret = callOld(XOpenDisplay, NULL);
+    if (!ret)
+        ret = callOld(XOpenDisplay, name);
+    if (!ret)
+        printf("cant open any display\n");
+    return ret;
+}
+
 defineHook(ssize_t, sendmsg, int fd, struct msghdr *msg, int flags) {
     if (msg->msg_name) {
         struct sockaddr_in* in = ((struct sockaddr_in*) msg->msg_name);
@@ -502,14 +524,8 @@ void initialize_wlldr() {
             chipID = cip;
         }
 
-        if (config.contains("sys_monitor"))
-            redirectSysMonitor = config.at("sys_monitor").get<bool>();
-
-        if (config.contains("mt4")) {
-
-
+        if (config.contains("mt4"))
             isMt4 = config.at("mt4").get<bool>();
-        }
 
         if (config.contains("surround51"))
             useSurround51 = config.at("surround51").get<bool>();
@@ -559,7 +575,9 @@ void initialize_wlldr() {
         enableHook(str400Receive, 0x8371440);
 
         // fix resolution
-        enableHook(XGetWindowAttributes, dlsym(dlopen("libX11.so.6", 2),"XGetWindowAttributes"));
+        enableHook(XGetWindowAttributes, XGetWindowAttributes);
+
+        enableHook(XOpenDisplay, 0x8057d28);
     } else {
         patchMemoryString0((void*)0xaafaa88, "mucha.local");
         //patchMemory((void*)0x81de9fc, { 0x66, 0xc7, 0x85, 0x62, 0xfe, 0xff, 0xff, 0xBB, 0x01 }); // port 443 mucha patch
@@ -591,6 +609,8 @@ void initialize_wlldr() {
         enableHook(billingSave, 0x8401A70);
 
         enableHook(sendAlthmand, 0xa851320);
+
+        enableHook(XOpenDisplay, 0x805504c);
     }
 
     if (isTerminal)
@@ -624,7 +644,7 @@ void initialize_wlldr() {
     enableHook(alin0, dlsym(alin_dll, "alin_term"));
 
     // dont hide cursor
-    enableHook(XCreatePixmapCursor, dlsym(dlopen("libX11.so.6", 2),"XCreatePixmapCursor"));
+    enableHook(XCreatePixmapCursor, XCreatePixmapCursor);
 
     std::thread t(jvsThread);
     t.detach();

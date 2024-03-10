@@ -5,7 +5,6 @@
 #include <csignal>
 #include <X11/X.h>
 #include <X11/Xlib.h>
-#include <X11/Xutil.h>
 #include <dlfcn.h>
 #include "hook.h"
 #include "config.h"
@@ -93,7 +92,14 @@ void init_input() {
 float maxAxis = SDL_JOYSTICK_AXIS_MAX -1 ;
 
 void update_input() {
+    bool focused = false;
     if (display != NULL) {
+        Window retWindow;
+        int rtt;
+        XGetInputFocus(display, &retWindow, &rtt);
+
+        focused = retWindow == window;
+
         XEvent e;
         while (XPending(display))
         {
@@ -130,6 +136,8 @@ void update_input() {
             }
 
             case SDL_CONTROLLERAXISMOTION: {
+                if (!focused)
+                    break;
                 if (event.caxis.axis == controllerAxisSteer) {
                     int axisFull = int(event.caxis.value) + maxAxis;
                     float axisRange = float(axisFull) / maxAxis;
@@ -168,6 +176,9 @@ void update_input() {
 
             case SDL_CONTROLLERBUTTONUP:
             case SDL_CONTROLLERBUTTONDOWN: {
+                if (!focused)
+                    break;
+
                 auto button = (SDL_GameControllerButton)event.cbutton.button;
                 bool down = event.type == SDL_CONTROLLERBUTTONDOWN;
 
@@ -211,6 +222,9 @@ void update_input() {
             // TODO: FIX KEYBOARD EVENTS
             case SDL_KEYUP:
             case SDL_KEYDOWN: {
+                if (!focused)
+                    break;
+
                 SDL_Keycode code = event.key.keysym.sym;
                 bool down = event.key.state != SDL_RELEASED;
 
