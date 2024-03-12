@@ -2,8 +2,6 @@
 fivedxp linux loader (5dx+ 2.20.02 & 4 1.10.08)
 https://nightly.link/feathercx/fivedxp/workflows/build/master/release.zip
 
-- currently only works with controllers
-
 ### custom keybinds is wip
 
 # keyboard controls
