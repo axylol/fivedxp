@@ -10,6 +10,7 @@
 #include "config.h"
 #include "touch.h"
 #include <map>
+#include <SDL2/SDL.h>
 
 std::map<const char*, KeySym> xKeys = {
         { "XK_F1", XK_F1 },
