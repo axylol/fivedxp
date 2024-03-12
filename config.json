@@ -4,5 +4,9 @@
   "surround51": false,
   "access_code": "111",
   "chip_id": "222",
-  "no_jvs_timeout_5dxp": false
+  "jvs": true,
+  "str400": true,
+  "str3": false,
+  "touch": true,
+  "redirect_magnetic_card": ""
 }

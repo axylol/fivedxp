@@ -5,3 +5,8 @@ extern bool isTerminal;
 extern std::string accessCode, chipID;
 extern bool isMt4;
 extern bool useSurround51;
+extern char* redirectMagneticCard;
+extern bool useJvs;
+extern bool useStr400;
+extern bool useStr3;
+extern bool useTouch;
