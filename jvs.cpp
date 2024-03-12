@@ -756,7 +756,6 @@ void update_jvs()
                     default:
                     {
                         printf("unhandled namco command %d %p\n", inputPacket.data[index + 1], inputPacket.data[index + 1]);
-                        system("pause");
                         break;
                     }
                 }
