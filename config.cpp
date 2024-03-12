@@ -1,8 +1,8 @@
 #include "config.h"
 
 bool isTerminal = false;
-std::string accessCode;
-std::string chipID;
+char* accessCode = NULL;
+char* chipID = NULL;
 bool isMt4 = false;
 bool useSurround51 = false;
 char* redirectMagneticCard = NULL;

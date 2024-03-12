@@ -2,7 +2,8 @@
 #include <string>
 
 extern bool isTerminal;
-extern std::string accessCode, chipID;
+extern char* accessCode;
+extern char* chipID;
 extern bool isMt4;
 extern bool useSurround51;
 extern char* redirectMagneticCard;
