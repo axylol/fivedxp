@@ -26,6 +26,7 @@
 #include "ssl.hpp"
 #include "input.h"
 #include "str400.hpp"
+#include "limiter.hpp"
 
 using namespace nlohmann;
 
@@ -78,8 +79,14 @@ defineHook(int, open, const char *pathname, int flags, ...) {
         printf("open(\"%s\", %d)\n", pathname, flags);
     }
 
-    if (isMt4 && strcmp(pathname, "/dev/ttyS1") == 0 && !redirectMagneticCard.empty())
-        return callOld(open, redirectMagneticCard.c_str(), flags);
+    if (isMt4 && strcmp(pathname, "/dev/ttyS1") == 0 && redirectMagneticCard) {
+        printf("open magnetic card %s\n", redirectMagneticCard);
+        int ret = callOld(open, redirectMagneticCard, flags);
+        if (ret == -1) {
+            printf("cant open magnetic card %d\n", errno);
+        }
+        return ret;
+    }
 
     if ((strcmp(pathname, "/dev/ttyS2") == 0 || strcmp(pathname, "/dev/tnt0") == 0) && useJvs)
         return jvsFd;
@@ -576,7 +583,9 @@ void initialize_wlldr() {
 
         if (config.contains("redirect_magnetic_card")) {
             std::string rdmc = config.at("redirect_magnetic_card").get<std::string>();
-            redirectMagneticCard = rdmc;
+            redirectMagneticCard = new char[rdmc.size() + 1];
+            memcpy(redirectMagneticCard, rdmc.c_str(), rdmc.size());
+            redirectMagneticCard[rdmc.size()] = 0;
         }
     } catch (json::exception e) {
         f.close();
@@ -589,6 +598,9 @@ void initialize_wlldr() {
     }
 
     printf("terminal=%d, mt4=%d\n", isTerminal, isMt4);
+
+    if (redirectMagneticCard)
+        printf("Redirecting mgcard to %s\n", redirectMagneticCard);
 
     initHasp();
     printf("hasp\n");
@@ -608,6 +620,9 @@ void initialize_wlldr() {
     // disable ssl verification for mucha
     disableSSLCert();
     printf("ssl\n");
+
+    init_limiter();
+    printf("limiter\n");
 
     if (isMt4) {
         patchMemoryString0((void*)0x8c11004, "mucha.local");
