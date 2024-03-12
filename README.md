@@ -3,7 +3,22 @@ fivedxp linux loader (5dx+ 2.20.02 & 4 1.10.08)
 https://nightly.link/feathercx/fivedxp/workflows/build/master/release.zip
 
 - currently only works with controllers
-- use a keyboard to controller software if you want to use keyboard
+
+### custom keybinds is wip
+
+# keyboard controls
+- w = gas
+- a = left
+- d = right
+- s = brakes
+- q = interrupt
+- e = view change
+- o = shift gear down
+- p = shift gear up
+- left arrow = toggle test menu
+- up / down arrow = test up / down
+- right arrow = test enter
+- c = card
 
 # xbox controls
 - y = view change

@@ -10,3 +10,4 @@ bool useJvs = true;
 bool useStr400 = true;
 bool useStr3 = false;
 bool useTouch = true;
+bool useKeyboard = true;

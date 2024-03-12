@@ -1,14 +1,70 @@
 #include "input.h"
 #include "jvs.h"
 #include "bana.h"
-#include <SDL2/SDL.h>
 #include <csignal>
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <dlfcn.h>
+#include <X11/keysym.h>
 #include "hook.h"
 #include "config.h"
 #include "touch.h"
+#include <map>
+
+std::map<const char*, KeySym> xKeys = {
+        { "XK_F1", XK_F1 },
+        { "XK_F2", XK_F2 },
+        { "XK_F3", XK_F3 },
+        { "XK_F4", XK_F4 },
+        { "XK_F5", XK_F5 },
+        { "XK_F6", XK_F6 },
+        { "XK_F7", XK_F7 },
+        { "XK_F8", XK_F8 },
+        { "XK_F9", XK_F9 },
+        { "XK_F10", XK_F10 },
+        { "XK_F11", XK_F11 },
+        { "XK_F12", XK_F12 },
+        { "XK_0", XK_0 },
+        { "XK_1", XK_1 },
+        { "XK_2", XK_2 },
+        { "XK_3", XK_3 },
+        { "XK_4", XK_4 },
+        { "XK_5", XK_5 },
+        { "XK_6", XK_6 },
+        { "XK_7", XK_7 },
+        { "XK_8", XK_8 },
+        { "XK_9", XK_9 },
+        { "XK_A", XK_a },
+        { "XK_B", XK_b },
+        { "XK_C", XK_c },
+        { "XK_D", XK_d },
+        { "XK_E", XK_e },
+        { "XK_F", XK_f },
+        { "XK_G", XK_g },
+        { "XK_H", XK_h },
+        { "XK_I", XK_i },
+        { "XK_J", XK_j },
+        { "XK_K", XK_k },
+        { "XK_L", XK_l },
+        { "XK_M", XK_m },
+        { "XK_N", XK_n },
+        { "XK_O", XK_o },
+        { "XK_P", XK_p },
+        { "XK_Q", XK_q },
+        { "XK_R", XK_r },
+        { "XK_S", XK_s },
+        { "XK_T", XK_t },
+        { "XK_U", XK_u },
+        { "XK_V", XK_v },
+        { "XK_W", XK_w },
+        { "XK_X", XK_x },
+        { "XK_Y", XK_y },
+        { "XK_Z", XK_z },
+        { "XK_leftarrow", XK_Left },
+        { "XK_uparrow", XK_Up },
+        { "XK_rightarrow", XK_Right },
+        { "XK_downarrow", XK_Down }
+};
 
 SDL_GameControllerButton ctrlKeybindTestSwitch = SDL_CONTROLLER_BUTTON_DPAD_LEFT;
 SDL_GameControllerButton ctrlKeybindTestUp = SDL_CONTROLLER_BUTTON_DPAD_UP;
@@ -25,20 +81,20 @@ SDL_GameControllerAxis controllerAxisSteer = SDL_CONTROLLER_AXIS_LEFTX;
 SDL_GameControllerAxis controllerAxisGas = SDL_CONTROLLER_AXIS_TRIGGERRIGHT;
 SDL_GameControllerAxis controllerAxisBrake = SDL_CONTROLLER_AXIS_TRIGGERLEFT;
 
-SDL_Keycode kbKeybindTestSwitch = SDLK_LEFT;
-SDL_Keycode kbKeybindTestUp = SDLK_UP;
-SDL_Keycode kbKeybindTestDown = SDLK_DOWN;
-SDL_Keycode kbKeybindTestEnter = SDLK_RIGHT;
-SDL_Keycode kbKeybindShiftUp = SDLK_EQUALS;
-SDL_Keycode kbKeybindShiftDown = SDLK_MINUS;
-SDL_Keycode kbKeybindPerspective = SDLK_e;
-SDL_Keycode kbKeybindInterrupt = SDLK_q;
-SDL_Keycode kbKeybindGas = SDLK_w;
-SDL_Keycode kbKeybindLeft = SDLK_a;
-SDL_Keycode kbKeybindBrakes = SDLK_s;
-SDL_Keycode kbKeybindRight = SDLK_d;
-SDL_Keycode kbKeybindCard = SDLK_c;
-SDL_Keycode kbKeybindServiceSwitch = SDLK_f;
+KeySym kbKeybindTestSwitch = XK_Left;
+KeySym kbKeybindTestUp = XK_Up;
+KeySym kbKeybindTestDown = XK_Down;
+KeySym kbKeybindTestEnter = XK_Right;
+KeySym kbKeybindShiftUp = XK_p;
+KeySym kbKeybindShiftDown = XK_o;
+KeySym kbKeybindPerspective = XK_e;
+KeySym kbKeybindInterrupt = XK_q;
+KeySym kbKeybindGas = XK_w;
+KeySym kbKeybindLeft = XK_a;
+KeySym kbKeybindBrakes = XK_s;
+KeySym kbKeybindRight = XK_d;
+KeySym kbKeybindCard = XK_c;
+KeySym kbKeybindServiceSwitch = XK_v;
 
 bool kbSteerLeft = false;
 bool kbSteerRight = false;
@@ -50,13 +106,15 @@ bool inputStopped = false;
 Display* display = NULL;
 Window window = 0;
 
+#define SDL_WINDOW
+
 defineHook(int, initWindow, int a1) {
     int ret = callOld(initWindow, a1);
     if (ret == 0) {
         display = *(Display**)(a1 + 4);
         window = *(Window*)(a1 + 12);
 
-        XSelectInput(display, window, ButtonPressMask | ButtonReleaseMask);
+        XSelectInput(display, window, ButtonPressMask | ButtonReleaseMask | KeyPressMask | KeyReleaseMask);
     }
     return ret;
 }
@@ -74,7 +132,7 @@ void init_input() {
     struct sigaction action;
     sigaction(SIGINT, NULL, &action);
 
-    if (SDL_Init( SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS) != 0) {
+    if (SDL_Init( SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS | SDL_INIT_VIDEO) != 0) {
         sigaction(SIGINT, &action, NULL);
 
         printf("cant initialize sdl %s\n", SDL_GetError());
@@ -93,6 +151,7 @@ float maxAxis = SDL_JOYSTICK_AXIS_MAX -1 ;
 
 void update_input() {
     bool focused = false;
+
     if (display != NULL) {
         Window retWindow;
         int rtt;
@@ -114,6 +173,56 @@ void update_input() {
                     bool down = e.type == ButtonPress;
                     update_touch(down, e.xbutton.x, e.xbutton.y);
                     break;
+                }
+                case KeyPress:
+                case KeyRelease: {
+                    if (!useKeyboard)
+                        break;
+                    if (!focused)
+                        break;
+
+                    bool down = e.type == KeyPress;
+                    KeySym code = XKeycodeToKeysym(display, e.xkey.keycode, 0);
+
+                    if (code == kbKeybindTestSwitch && !down) {
+                        testState = !testState;
+                        jvs_test(testState);
+                    }
+                    if (code == kbKeybindServiceSwitch)
+                        jvs_service(down);
+                    if (code == kbKeybindTestUp)
+                        jvs_test_up(down);
+                    if (code == kbKeybindTestDown)
+                        jvs_test_down(down);
+                    if (code == kbKeybindTestEnter)
+                        jvs_test_enter(down);
+                    if (code == kbKeybindShiftUp && down)
+                        jvs_shift_up();
+                    if (code == kbKeybindShiftDown && down)
+                        jvs_shift_down();
+                    if (code == kbKeybindPerspective)
+                        jvs_perspective(down);
+                    if (code == kbKeybindInterrupt)
+                        jvs_interrupt(down);
+                    if (code == kbKeybindGas)
+                        jvs_gas(down ? 128 : 0);
+                    if (code == kbKeybindBrakes)
+                        jvs_brakes(down ? 128 : 0);
+                    if (code == kbKeybindLeft || code == kbKeybindRight) {
+                        if (code == kbKeybindLeft)
+                            kbSteerLeft = down;
+                        else
+                            kbSteerRight = down;
+
+                        uint8_t val = 127;
+                        if (kbSteerRight)
+                            val += 127;
+                        if (kbSteerLeft)
+                            val -= 127;
+                        jvs_wheel(val);
+                    }
+                    if (code == kbKeybindCard)
+                        bana_enter_card(down);
                 }
             }
         }
@@ -209,67 +318,6 @@ void update_input() {
 
                 break;
             }
-
-            case SDL_MOUSEMOTION: {
-                printf("mouse motion\n");
-                break;
-            }
-            case SDL_MOUSEBUTTONUP: {
-                printf("mouse up\n");
-                break;
-            }
-
-            // TODO: FIX KEYBOARD EVENTS
-            case SDL_KEYUP:
-            case SDL_KEYDOWN: {
-                if (!focused)
-                    break;
-
-                SDL_Keycode code = event.key.keysym.sym;
-                bool down = event.key.state != SDL_RELEASED;
-
-                if (code == kbKeybindTestSwitch && !down) {
-                    testState = !testState;
-                    jvs_test(testState);
-                }
-                if (code == kbKeybindServiceSwitch)
-                    jvs_service(down);
-                if (code == kbKeybindTestUp)
-                    jvs_test_up(down);
-                if (code == kbKeybindTestDown)
-                    jvs_test_down(down);
-                if (code == kbKeybindTestEnter)
-                    jvs_test_enter(down);
-                if (code == kbKeybindShiftUp && down)
-                    jvs_shift_up();
-                if (code == kbKeybindShiftDown && down)
-                    jvs_shift_down();
-                if (code == kbKeybindPerspective)
-                    jvs_perspective(down);
-                if (code == kbKeybindInterrupt)
-                    jvs_interrupt(down);
-                if (code == kbKeybindGas)
-                    jvs_gas(down ? 128 : 0);
-                if (code == kbKeybindBrakes)
-                    jvs_brakes(down ? 128 : 0);
-                if (code == kbKeybindLeft || code == kbKeybindRight) {
-                    if (code == kbKeybindLeft)
-                        kbSteerLeft = down;
-                    else
-                        kbSteerRight = down;
-
-                    uint8_t val = 127;
-                    if (kbSteerRight)
-                        val += 127;
-                    if (kbSteerLeft)
-                        val -= 127;
-                    jvs_wheel(val);
-                }
-                if (code == kbKeybindCard)
-                    bana_enter_card(down);
-                break;
-            }
-
             case SDL_QUIT: {
                 printf("sdl quit\n");
                 inputStopped = true;
