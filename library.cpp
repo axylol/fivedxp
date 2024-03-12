@@ -558,12 +558,18 @@ void initialize_wlldr() {
         isTerminal = config.at("terminal").get<bool>();
 
         if (config.contains("access_code") && config.contains("chip_id")) {
-            // crashses if i do accessCode = config
             std::string acc = config.at("access_code").get<std::string>();
             std::string cip = config.at("chip_id").get<std::string>();
 
-            accessCode = acc;
-            chipID = cip;
+            accessCode = new char[acc.size() + 1];
+            if (!acc.empty())
+                memcpy(accessCode, acc.c_str(), acc.size());
+            accessCode[acc.size()] = 0;
+
+            chipID = new char[cip.size() + 1];
+            if (!cip.empty())
+                memcpy(chipID, cip.c_str(), cip.size());
+            chipID[cip.size()] = 0;
         }
 
         if (config.contains("mt4"))
@@ -646,6 +652,8 @@ void initialize_wlldr() {
 
         enableHook(FFBIo_State_PowerOn, 0x8369CD0);
         enableHook(FFBIo_State_PowerOff, 0x8369BB0);
+
+        enableHook(open, 0x8057d08);
     } else {
         patchMemoryString0((void*)0xaafaa88, "mucha.local");
         //patchMemory((void*)0x81de9fc, { 0x66, 0xc7, 0x85, 0x62, 0xfe, 0xff, 0xff, 0xBB, 0x01 }); // port 443 mucha patch
@@ -682,6 +690,8 @@ void initialize_wlldr() {
 
         enableHook(FFBIo_State_PowerOn, 0x80DFD50);
         enableHook(FFBIo_State_PowerOff, 0x80DFCC0);
+
+        enableHook(open, 0x805508c);
     }
 
     if (isTerminal)
@@ -690,7 +700,6 @@ void initialize_wlldr() {
     enableHook(sendmsg, sendmsg);
 
     enableHook(system, system);
-    enableHook(open, open);
     enableHook(close, close);
     enableHook(tcgetattr, tcgetattr);
     enableHook(tcsetattr, tcsetattr);

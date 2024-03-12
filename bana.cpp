@@ -151,10 +151,10 @@ void initBana() {
     }
 
     g_cardData = new CardData();
-    if (!accessCode.empty())
-        memcpy(g_cardData->accessCode, accessCode.c_str(), accessCode.size() + 1);
-    if (!chipID.empty())
-        memcpy(g_cardData->chipID, chipID.c_str(), chipID.size() + 1);
+    if (accessCode)
+        memcpy(g_cardData->accessCode, accessCode, strlen(accessCode) + 1);
+    if (chipID)
+        memcpy(g_cardData->chipID, chipID, strlen(chipID) + 1);
     memcpy(g_cardData->cardType, "NBGIC6", 6);
 }
 
