@@ -36,37 +36,8 @@ void limiter() {
     }
 }
 
-struct timespec oldTimestamp2,
-        newTimestamp2,
-        sleepyTime2,
-        remainingTime2;
-
-void limiter2() {
-    if ( clock_gettime( clockType, &newTimestamp2 ) == 0 ) {
-        sleepyTime2.tv_nsec = targetFrameTime - newTimestamp2.tv_nsec + oldTimestamp2.tv_nsec;
-        while( sleepyTime2.tv_nsec > 0 && sleepyTime2.tv_nsec < targetFrameTime ) {
-
-            // sleep in smaller and smaller intervals
-            sleepyTime2.tv_nsec /= 2;
-            nanosleep( &sleepyTime2, &remainingTime2 );
-            clock_gettime( clockType, &newTimestamp2 );
-            sleepyTime2.tv_nsec = targetFrameTime - newTimestamp2.tv_nsec + oldTimestamp2.tv_nsec;
-
-            // For FPS == 1 this is needed as tv_nsec cannot exceed 999999999
-            sleepyTime2.tv_nsec += newTimestamp2.tv_sec*1000000000 - oldTimestamp2.tv_sec*1000000000;
-        }
-        clock_gettime( clockType, &oldTimestamp2 );
-    }
-}
-
-defineHook(void, glXSwapBuffers, int dpy, int drawable ) {
-    callOld(glXSwapBuffers, dpy, drawable);
-
-    limiter();
-}
-
 defineHook(void, glXWaitVideoSyncSGI) {
-    limiter2();
+    limiter();
 }
 
 defineHook(void, initGlx, int* a1) {
@@ -76,8 +47,10 @@ defineHook(void, initGlx, int* a1) {
 
 void init_limiter() {
     if (isMt4) {
-        enableHook(glXSwapBuffers, 0x8059038);
+        //enableHook(glXSwapBuffers, 0x8059038);
         enableHook(initGlx, 0x89BA530);
+    } else {
+        enableHook(initGlx, 0xa826310);
     }
 
     targetFrameTime = 1000000000 / 60;

@@ -543,6 +543,16 @@ defineHook(int, FFBIo_State_PowerOff, int a1) {
     return callOld(FFBIo_State_PowerOff, a1);
 }
 
+defineHook(void, glTexParameteri, GLenum target, GLenum pname, GLenum param) {
+    if (param == GL_CLAMP) {
+        // fix texture rendering issues
+        param = GL_CLAMP_TO_EDGE;
+    }
+
+    callOld(glTexParameteri, target, pname, param);
+
+}
+
 __attribute__((constructor))
 void initialize_wlldr() {
     std::ifstream f("./config.json");
@@ -593,6 +603,9 @@ void initialize_wlldr() {
             memcpy(redirectMagneticCard, rdmc.c_str(), rdmc.size());
             redirectMagneticCard[rdmc.size()] = 0;
         }
+
+        if (config.contains("keyboard"))
+            useKeyboard = config.at("keyboard").get<bool>();
     } catch (json::exception e) {
         f.close();
 
@@ -654,6 +667,7 @@ void initialize_wlldr() {
         enableHook(FFBIo_State_PowerOff, 0x8369BB0);
 
         enableHook(open, 0x8057d08);
+        enableHook(glTexParameteri, 0x8059228);
     } else {
         patchMemoryString0((void*)0xaafaa88, "mucha.local");
         //patchMemory((void*)0x81de9fc, { 0x66, 0xc7, 0x85, 0x62, 0xfe, 0xff, 0xff, 0xBB, 0x01 }); // port 443 mucha patch

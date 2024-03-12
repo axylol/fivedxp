@@ -8,5 +8,6 @@
   "str400": true,
   "str3": false,
   "touch": true,
-  "redirect_magnetic_card": ""
+  "redirect_magnetic_card": "",
+  "keyboard": true
 }
