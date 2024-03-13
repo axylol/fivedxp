@@ -564,8 +564,10 @@ void initialize_wlldr() {
     }
     initSysMonitor();
     printf("monitor\n");
-    initBana();
-    printf("bana\n");
+    if (useBana) {
+        initBana();
+        printf("bana\n");
+    }
     if (useStr400) {
         init_str400();
         printf("str400\n");
