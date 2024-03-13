@@ -890,13 +890,13 @@ void jvs_gear(uint8_t gear) {
 }
 
 void jvs_shift_up() {
-    if (wmmtGear > 6)
+    if (wmmtGear >= 6)
         return;
     wmmtGear++;
     updateGear();
 }
 void jvs_shift_down() {
-    if (wmmtGear < 0)
+    if (wmmtGear <= 0)
         return;
     wmmtGear--;
     updateGear();

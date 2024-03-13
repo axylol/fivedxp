@@ -197,7 +197,7 @@ bool loadKeybinds() {
         tryLoadCtrl(controllerConfig, &ctrlKeybindCard, "card");
         tryLoadCtrl(controllerConfig, &ctrlKeybindPerspective, "perspective");
         tryLoadCtrl(controllerConfig, &ctrlKeybindInterrupt, "interrupt");
-        tryLoadCtrl(controllerConfig, &ctrlKeybindService, "test_enter");
+        tryLoadCtrl(controllerConfig, &ctrlKeybindService, "service");
         tryLoadCtrl(controllerConfig, &ctrlKeybindTestUp, "shift_up");
         tryLoadCtrl(controllerConfig, &ctrlKeybindShiftDown, "shift_down");
         tryLoadCtrl(controllerConfig, &ctrlKeybindTestSwitch, "test_switch");
@@ -213,7 +213,7 @@ bool loadKeybinds() {
         tryLoadKb(keyboardConfig, &kbKeybindCard, "card");
         tryLoadKb(keyboardConfig, &kbKeybindPerspective, "perspective");
         tryLoadKb(keyboardConfig, &kbKeybindInterrupt, "interrupt");
-        tryLoadKb(keyboardConfig, &kbKeybindServiceSwitch, "test_enter");
+        tryLoadKb(keyboardConfig, &kbKeybindServiceSwitch, "service");
         tryLoadKb(keyboardConfig, &kbKeybindTestUp, "shift_up");
         tryLoadKb(keyboardConfig, &kbKeybindShiftDown, "shift_down");
         tryLoadKb(keyboardConfig, &kbKeybindTestSwitch, "test_switch");
