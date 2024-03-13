@@ -1,0 +1,30 @@
+[controller]
+gas = "SDL_TRIGGERRIGHT" # SDL_SDL_TRIGGER(RIGHT/LEFT), SDL_(LEFT/RIGHT)X
+wheel = "SDL_LEFTX"
+brakes = "SDL_TRIGGERLEFT"
+card = "SDL_B" # SDL_START, SDL_BACK, SDL_(RIGHT/LEFT)STICK, SDL_X, SDL_A, SDL_B, SDL_Y, SDL_(RIGHT/LEFT)SHOULDER, SDL_DPAD_(LEFT/UP/DOWN/RIGHT)
+perspective = "SDL_Y"
+interrupt = "SDL_A"
+service = "SDL_X"
+shift_down = "SDL_RIGHTSHOULDER"
+shift_up = "SDL_LEFTSHOULDER"
+test_switch = "SDL_DPAD_LEFT"
+test_up = "SDL_DPAD_UP"
+test_down = "SDL_DPAD_DOWN"
+test_enter = "SDL_DPAD_RIGHT"
+
+[keyboard]
+gas = "XK_W" # XK_A - XK_Z, XK_(left/up/down/right)arrow, XK_F1 - XK_F12
+left = "XK_A"
+brakes = "XK_S"
+right = "XK_D"
+card = "XK_C"
+perspective = "XK_E"
+interrupt = "XK_Q"
+service = "XK_V"
+shift_down = "XK_O"
+shift_up = "XK_P"
+test_switch = "XK_leftarrow"
+test_up = "XK_uparrow"
+test_down = "XK_downarrow"
+test_enter = "XK_rightarrow"

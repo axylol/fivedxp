@@ -20,26 +20,19 @@
 #include <dlfcn.h>
 #include <sys/epoll.h>
 #include <sys/uio.h>
-#include <fstream>
-#include "json.hpp"
 #include "memory.h"
 #include "ssl.hpp"
 #include "input.h"
 #include "str400.hpp"
 #include "limiter.hpp"
-
-using namespace nlohmann;
+#include <GL/gl.h>
+#include <GL/glx.h>
 
 int jvsFd = 144444443;
 int touchFd = 144444444;
 int strFd = 144444445;
 
 int ffbState = 0;
-
-#include <GL/gl.h>
-#include <GL/glx.h>
-#include <sys/stat.h>
-
 
 void jvsThread() {
     init_input();
@@ -148,12 +141,12 @@ defineHook(int, fcntl, int fd, int cmd, void* arg) {
     return callOld(fcntl, fd, cmd, arg);
 }
 
-defineHook(int, fcntl64, int fd, int cmd, void* arg) {
+defineHook(int, fcntl64, int fd, int cmd, int arg) {
     if (fd == touchFd)
         return 0;
     if (fd == strFd)
         return 0;
-    return callOld(fcntl, fd, cmd, arg);
+    return callOld(fcntl64, fd, cmd, arg);
 }
 
 defineHook(int, tcgetattr, int fildes, struct termios *termios_p) {
@@ -178,7 +171,7 @@ defineHook(int, tcsetattr, int fildes, int optional_actions,
 }
 
 defineHook(int, epoll_ctl, int epfd, int op, int fd, struct epoll_event *event) {
-    if (fd == touchFd)
+    if (fd == touchFd || fd == strFd)
         return 0;
     return callOld(epoll_ctl, epfd, op, fd, event);
 }
@@ -261,6 +254,10 @@ defineHook(ssize_t, writev, int fd, const struct iovec *iov, int iovcnt) {
         writeTouch((void*)iov->iov_base, iov->iov_len);
         return iov->iov_len;
     }
+
+    if (fd == strFd)
+        return iov->iov_len;
+
     return callOld(writev, fd, iov, iovcnt);
 }
 
@@ -271,6 +268,15 @@ defineHook(ssize_t, readv, int fd, const struct iovec *iov, int iovcnt) {
             return 0;
         return size;
     }
+
+    if (fd == strFd) { // im a bit lazy
+        // super hacky
+        if (ffbState == 0)
+            ffbState = 3;
+
+        return jmp_read(strFd, (void*)iov->iov_base, iov->iov_len);
+    }
+
     return callOld(writev, fd, iov, iovcnt);
 }
 
@@ -555,66 +561,8 @@ defineHook(void, glTexParameteri, GLenum target, GLenum pname, GLenum param) {
 
 __attribute__((constructor))
 void initialize_wlldr() {
-    std::ifstream f("./config.json");
-    if (!f.is_open()) {
-        printf("can't open file config.json\n");
+    if (!loadConfig())
         return;
-    }
-
-    try {
-        json config = json::parse(f);
-        f.close();
-
-        isTerminal = config.at("terminal").get<bool>();
-
-        if (config.contains("access_code") && config.contains("chip_id")) {
-            std::string acc = config.at("access_code").get<std::string>();
-            std::string cip = config.at("chip_id").get<std::string>();
-
-            accessCode = new char[acc.size() + 1];
-            if (!acc.empty())
-                memcpy(accessCode, acc.c_str(), acc.size());
-            accessCode[acc.size()] = 0;
-
-            chipID = new char[cip.size() + 1];
-            if (!cip.empty())
-                memcpy(chipID, cip.c_str(), cip.size());
-            chipID[cip.size()] = 0;
-        }
-
-        if (config.contains("mt4"))
-            isMt4 = config.at("mt4").get<bool>();
-
-        if (config.contains("surround51"))
-            useSurround51 = config.at("surround51").get<bool>();
-
-        if (config.contains("jvs"))
-            useJvs = config.at("jvs").get<bool>();
-        if (config.contains("str400"))
-            useStr400 = config.at("str400").get<bool>();
-        if (config.contains("str3"))
-            useStr3 = config.at("str3").get<bool>();
-        if (config.contains("touch"))
-            useTouch = config.at("touch").get<bool>();
-
-        if (config.contains("redirect_magnetic_card")) {
-            std::string rdmc = config.at("redirect_magnetic_card").get<std::string>();
-            redirectMagneticCard = new char[rdmc.size() + 1];
-            memcpy(redirectMagneticCard, rdmc.c_str(), rdmc.size());
-            redirectMagneticCard[rdmc.size()] = 0;
-        }
-
-        if (config.contains("keyboard"))
-            useKeyboard = config.at("keyboard").get<bool>();
-    } catch (json::exception e) {
-        f.close();
-
-        printf("%s\n", e.what());
-        return;
-    } catch (...) {
-        printf("a exception uhh\n");
-        return;
-    }
 
     printf("terminal=%d, mt4=%d\n", isTerminal, isMt4);
 
@@ -629,8 +577,10 @@ void initialize_wlldr() {
     }
     initSysMonitor();
     printf("monitor\n");
-    initBana();
-    printf("bana\n");
+    if (useBana) {
+        initBana();
+        printf("bana\n");
+    }
     if (useStr400) {
         init_str400();
         printf("str400\n");

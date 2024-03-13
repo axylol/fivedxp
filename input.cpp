@@ -9,6 +9,7 @@
 #include "hook.h"
 #include "config.h"
 #include "touch.h"
+#include "toml.hpp"
 #include <map>
 #include <SDL2/SDL.h>
 
@@ -67,6 +68,35 @@ std::map<const char*, KeySym> xKeys = {
         { "XK_downarrow", XK_Down }
 };
 
+std::map<const char*, SDL_GameControllerButton> sdlButtons = {
+        { "SDL_START", SDL_CONTROLLER_BUTTON_START },
+        { "SDL_BACK", SDL_CONTROLLER_BUTTON_BACK },
+
+        { "SDL_LEFTSTICK", SDL_CONTROLLER_BUTTON_LEFTSTICK },
+        { "SDL_RIGHTSTICK", SDL_CONTROLLER_BUTTON_RIGHTSTICK },
+
+        {"SDL_B", SDL_CONTROLLER_BUTTON_B},
+        {"SDL_X", SDL_CONTROLLER_BUTTON_X},
+        {"SDL_A", SDL_CONTROLLER_BUTTON_A},
+        {"SDL_Y", SDL_CONTROLLER_BUTTON_Y},
+
+        { "SDL_RIGHTSHOULDER", SDL_CONTROLLER_BUTTON_RIGHTSHOULDER },
+        { "SDL_LEFTSHOULDER", SDL_CONTROLLER_BUTTON_LEFTSHOULDER },
+
+        { "SDL_DPAD_LEFT", SDL_CONTROLLER_BUTTON_DPAD_LEFT },
+        { "SDL_DPAD_UP", SDL_CONTROLLER_BUTTON_DPAD_UP },
+        { "SDL_DPAD_DOWN", SDL_CONTROLLER_BUTTON_DPAD_DOWN },
+        { "SDL_DPAD_RIGHT", SDL_CONTROLLER_BUTTON_DPAD_RIGHT }
+};
+
+std::map<const char*, SDL_GameControllerAxis > sdlAxis = {
+        { "SDL_TRIGGERRIGHT", SDL_CONTROLLER_AXIS_TRIGGERRIGHT },
+        { "SDL_TRIGGERLEFT", SDL_CONTROLLER_AXIS_TRIGGERLEFT },
+
+        {"SDL_LEFTX", SDL_CONTROLLER_AXIS_LEFTX},
+        {"SDL_RIGHTX", SDL_CONTROLLER_AXIS_RIGHTX}
+};
+
 SDL_GameControllerButton ctrlKeybindTestSwitch = SDL_CONTROLLER_BUTTON_DPAD_LEFT;
 SDL_GameControllerButton ctrlKeybindTestUp = SDL_CONTROLLER_BUTTON_DPAD_UP;
 SDL_GameControllerButton ctrlKeybindTestDown = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
@@ -120,6 +150,87 @@ defineHook(int, initWindow, int a1) {
     return ret;
 }
 
+void tryLoadCtrlAxis(toml::node_view<toml::node> table, SDL_GameControllerAxis* btn, std::string name) {
+    std::string configKey = table[name].as_string()->get();
+
+    for (const auto& [key, value] : sdlAxis) {
+        if (configKey != key)
+            continue;
+        *btn = value;
+        return;
+    }
+    printf("cant find sdl axis %s for %s\n", configKey.c_str(), name.c_str());
+}
+
+void tryLoadCtrl(toml::node_view<toml::node> table, SDL_GameControllerButton * btn, std::string name) {
+    std::string configKey = table[name].as_string()->get();
+
+    for (const auto& [key, value] : sdlButtons) {
+        if (configKey != key)
+            continue;
+        *btn = value;
+        return;
+    }
+    printf("cant find sdl button %s for %s\n", configKey.c_str(), name.c_str());
+}
+
+void tryLoadKb(toml::node_view<toml::node> table, KeySym* sym, std::string name) {
+    std::string configKey = table[name].as_string()->get();
+
+    for (const auto& [key, value] : xKeys) {
+        if (configKey != key)
+            continue;
+        *sym = value;
+        return;
+    }
+    printf("cant find key %s for %s\n", configKey.c_str(), name.c_str());
+}
+
+bool loadKeybinds() {
+    try {
+        auto config = toml::parse_file( "keybinds.toml" );
+
+        auto controllerConfig = config["controller"];
+        tryLoadCtrlAxis(controllerConfig, &controllerAxisGas, "gas");
+        tryLoadCtrlAxis(controllerConfig, &controllerAxisSteer, "wheel");
+        tryLoadCtrlAxis(controllerConfig, &controllerAxisBrake, "brakes");
+        tryLoadCtrl(controllerConfig, &ctrlKeybindCard, "card");
+        tryLoadCtrl(controllerConfig, &ctrlKeybindPerspective, "perspective");
+        tryLoadCtrl(controllerConfig, &ctrlKeybindInterrupt, "interrupt");
+        tryLoadCtrl(controllerConfig, &ctrlKeybindService, "service");
+        tryLoadCtrl(controllerConfig, &ctrlKeybindTestUp, "shift_up");
+        tryLoadCtrl(controllerConfig, &ctrlKeybindShiftDown, "shift_down");
+        tryLoadCtrl(controllerConfig, &ctrlKeybindTestSwitch, "test_switch");
+        tryLoadCtrl(controllerConfig, &ctrlKeybindTestUp, "test_up");
+        tryLoadCtrl(controllerConfig, &ctrlKeybindTestDown, "test_down");
+        tryLoadCtrl(controllerConfig, &ctrlKeybindTestEnter, "test_enter");
+
+        auto keyboardConfig = config["keyboard"];
+        tryLoadKb(keyboardConfig, &kbKeybindGas, "gas");
+        tryLoadKb(keyboardConfig, &kbKeybindLeft, "left");
+        tryLoadKb(keyboardConfig, &kbKeybindBrakes, "brakes");
+        tryLoadKb(keyboardConfig, &kbKeybindRight, "right");
+        tryLoadKb(keyboardConfig, &kbKeybindCard, "card");
+        tryLoadKb(keyboardConfig, &kbKeybindPerspective, "perspective");
+        tryLoadKb(keyboardConfig, &kbKeybindInterrupt, "interrupt");
+        tryLoadKb(keyboardConfig, &kbKeybindServiceSwitch, "service");
+        tryLoadKb(keyboardConfig, &kbKeybindTestUp, "shift_up");
+        tryLoadKb(keyboardConfig, &kbKeybindShiftDown, "shift_down");
+        tryLoadKb(keyboardConfig, &kbKeybindTestSwitch, "test_switch");
+        tryLoadKb(keyboardConfig, &kbKeybindTestUp, "test_up");
+        tryLoadKb(keyboardConfig, &kbKeybindTestDown, "test_down");
+        tryLoadKb(keyboardConfig, &kbKeybindTestEnter, "test_enter");
+
+    } catch (toml::ex::parse_error& e) {
+        printf("error reading keybinds.toml\n%s\n", e.what());
+        return false;
+    } catch (...) {
+        printf("unknown exception while reading keybinds\n");
+        return false;
+    }
+    return true;
+}
+
 void init_input() {
     if (isMt4) {
         enableHook(initWindow, 0x89B8680);
@@ -146,6 +257,8 @@ void init_input() {
         printf("[warn] cant load gamecontrollerdb.txt, get it at https://github.com/mdqinc/SDL_GameControllerDB/blob/master/gamecontrollerdb.txt\n");
 
     SDL_GameControllerEventState(SDL_ENABLE);
+
+    loadKeybinds();
 }
 
 float maxAxis = SDL_JOYSTICK_AXIS_MAX -1 ;
