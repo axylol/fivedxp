@@ -141,12 +141,12 @@ defineHook(int, fcntl, int fd, int cmd, void* arg) {
     return callOld(fcntl, fd, cmd, arg);
 }
 
-defineHook(int, fcntl64, int fd, int cmd, void* arg) {
+defineHook(int, fcntl64, int fd, int cmd, int arg) {
     if (fd == touchFd)
         return 0;
     if (fd == strFd)
         return 0;
-    return callOld(fcntl, fd, cmd, arg);
+    return callOld(fcntl64, fd, cmd, arg);
 }
 
 defineHook(int, tcgetattr, int fildes, struct termios *termios_p) {
@@ -171,7 +171,7 @@ defineHook(int, tcsetattr, int fildes, int optional_actions,
 }
 
 defineHook(int, epoll_ctl, int epfd, int op, int fd, struct epoll_event *event) {
-    if (fd == touchFd)
+    if (fd == touchFd || fd == strFd)
         return 0;
     return callOld(epoll_ctl, epfd, op, fd, event);
 }
@@ -254,6 +254,10 @@ defineHook(ssize_t, writev, int fd, const struct iovec *iov, int iovcnt) {
         writeTouch((void*)iov->iov_base, iov->iov_len);
         return iov->iov_len;
     }
+
+    if (fd == strFd)
+        return iov->iov_len;
+
     return callOld(writev, fd, iov, iovcnt);
 }
 
@@ -264,6 +268,15 @@ defineHook(ssize_t, readv, int fd, const struct iovec *iov, int iovcnt) {
             return 0;
         return size;
     }
+
+    if (fd == strFd) { // im a bit lazy
+        // super hacky
+        if (ffbState == 0)
+            ffbState = 3;
+
+        return jmp_read(strFd, (void*)iov->iov_base, iov->iov_len);
+    }
+
     return callOld(writev, fd, iov, iovcnt);
 }
 
