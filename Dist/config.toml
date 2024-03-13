@@ -1,0 +1,21 @@
+[game]
+mt4 = false
+terminal = false
+
+[bana]
+enabled = true
+access_code = "111"
+chip_id = "222"
+
+[emu]
+jvs = true
+str400 = true
+str3 = false
+touch = true
+
+[sound]
+surround51 = false
+
+[magnetic_card]
+redirect = false
+path = "/dev/pts/2"

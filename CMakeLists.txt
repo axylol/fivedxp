@@ -7,6 +7,8 @@ set(CMAKE_C_FLAGS -m32)
 set(CMAKE_CXX_COMPILER g++)
 set(CMAKE_CXX_FLAGS -m32)
 
+include_directories(Include)
+
 add_library(fivedxp SHARED library.cpp
         jvs.cpp
         touch.cpp
@@ -16,4 +18,4 @@ add_library(fivedxp SHARED library.cpp
         input.cpp
 )
 
-target_link_libraries(fivedxp ${CMAKE_SOURCE_DIR}/libdobby.a SDL2)
+target_link_libraries(fivedxp ${CMAKE_SOURCE_DIR}/Libs/libdobby.a SDL2)

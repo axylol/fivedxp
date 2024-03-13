@@ -12,3 +12,6 @@ extern bool useStr400;
 extern bool useStr3;
 extern bool useTouch;
 extern bool useKeyboard;
+extern bool useBana;
+
+bool loadConfig();
