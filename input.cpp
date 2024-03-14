@@ -343,9 +343,9 @@ void update_input() {
                     if (code == kbKeybindInterrupt)
                         jvs_interrupt(down);
                     if (code == kbKeybindGas)
-                        jvs_gas(down ? 80 : 0);
+                        jvs_gas(down ? (useLegacyPedalsAxis ? 128 : 80) : 0);
                     if (code == kbKeybindBrakes)
-                        jvs_brakes(down ? 80 : 0);
+                        jvs_brakes(down ? (useLegacyPedalsAxis ? 128 : 80) : 0);
                     if (code == kbKeybindLeft || code == kbKeybindRight) {
                         if (code == kbKeybindLeft)
                             kbSteerLeft = down;

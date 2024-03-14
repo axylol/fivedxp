@@ -590,8 +590,10 @@ void initialize_wlldr() {
     disableSSLCert();
     printf("ssl\n");
 
-    init_limiter();
-    printf("limiter\n");
+    if (useLimiter) {
+        init_limiter();
+        printf("limiter\n");
+    }
 
     if (isMt4) {
         patchMemoryString0((void*)0x8c11004, "mucha.local");

@@ -13,6 +13,7 @@ bool useStr3 = false;
 bool useTouch = true;
 bool useKeyboard = true;
 bool useBana = true;
+bool useLimiter = true;
 
 char* copyCharString(char* str) {
     size_t len = strlen(str);
@@ -34,6 +35,9 @@ bool loadConfig() {
         auto gameConfig = config["game"];
         isMt4 = gameConfig["mt4"].as_boolean()->get();
         isTerminal = gameConfig["terminal"].as_boolean()->get();
+
+        if (gameConfig["limiter"].is_boolean())
+            useLimiter = gameConfig["limiter"].as_boolean()->get();
 
         auto banaConfig = config["bana"];
         useBana = banaConfig["enabled"].as_boolean()->get();

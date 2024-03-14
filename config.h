@@ -13,5 +13,6 @@ extern bool useStr3;
 extern bool useTouch;
 extern bool useKeyboard;
 extern bool useBana;
+extern bool useLimiter;
 
 bool loadConfig();
