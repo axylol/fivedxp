@@ -1,6 +1,7 @@
 [game]
 mt4 = false
 terminal = false
+limiter = true # whether to use builtin limiter
 
 [bana]
 enabled = true
