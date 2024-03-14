@@ -89,12 +89,15 @@ std::map<const char*, SDL_GameControllerButton> sdlButtons = {
         { "SDL_DPAD_RIGHT", SDL_CONTROLLER_BUTTON_DPAD_RIGHT }
 };
 
-std::map<const char*, SDL_GameControllerAxis > sdlAxis = {
+std::map<const char*, SDL_GameControllerAxis> sdlAxis = {
         { "SDL_TRIGGERRIGHT", SDL_CONTROLLER_AXIS_TRIGGERRIGHT },
         { "SDL_TRIGGERLEFT", SDL_CONTROLLER_AXIS_TRIGGERLEFT },
 
-        {"SDL_LEFTX", SDL_CONTROLLER_AXIS_LEFTX},
-        {"SDL_RIGHTX", SDL_CONTROLLER_AXIS_RIGHTX}
+        {"SDL_LEFTX", SDL_CONTROLLER_AXIS_LEFTX },
+        {"SDL_RIGHTX", SDL_CONTROLLER_AXIS_RIGHTX },
+
+        {"SDL_LEFTY", SDL_CONTROLLER_AXIS_LEFTY },
+        {"SDL_RIGHTY", SDL_CONTROLLER_AXIS_RIGHTY }
 };
 
 SDL_GameControllerButton ctrlKeybindTestSwitch = SDL_CONTROLLER_BUTTON_DPAD_LEFT;
@@ -111,6 +114,13 @@ SDL_GameControllerButton ctrlKeybindService = SDL_CONTROLLER_BUTTON_X;
 SDL_GameControllerAxis controllerAxisSteer = SDL_CONTROLLER_AXIS_LEFTX;
 SDL_GameControllerAxis controllerAxisGas = SDL_CONTROLLER_AXIS_TRIGGERRIGHT;
 SDL_GameControllerAxis controllerAxisBrake = SDL_CONTROLLER_AXIS_TRIGGERLEFT;
+
+bool gasReversed = false;
+bool gasFull = false;
+bool brakesReversed = false;
+bool brakesFull = false;
+float deadzone = 0.05f;
+bool useLegacyPedalsAxis = false;
 
 KeySym kbKeybindTestSwitch = XK_Left;
 KeySym kbKeybindTestUp = XK_Up;
@@ -198,7 +208,7 @@ bool loadKeybinds() {
         tryLoadCtrl(controllerConfig, &ctrlKeybindPerspective, "perspective");
         tryLoadCtrl(controllerConfig, &ctrlKeybindInterrupt, "interrupt");
         tryLoadCtrl(controllerConfig, &ctrlKeybindService, "service");
-        tryLoadCtrl(controllerConfig, &ctrlKeybindTestUp, "shift_up");
+        tryLoadCtrl(controllerConfig, &ctrlKeybindShiftUp, "shift_up");
         tryLoadCtrl(controllerConfig, &ctrlKeybindShiftDown, "shift_down");
         tryLoadCtrl(controllerConfig, &ctrlKeybindTestSwitch, "test_switch");
         tryLoadCtrl(controllerConfig, &ctrlKeybindTestUp, "test_up");
@@ -214,13 +224,27 @@ bool loadKeybinds() {
         tryLoadKb(keyboardConfig, &kbKeybindPerspective, "perspective");
         tryLoadKb(keyboardConfig, &kbKeybindInterrupt, "interrupt");
         tryLoadKb(keyboardConfig, &kbKeybindServiceSwitch, "service");
-        tryLoadKb(keyboardConfig, &kbKeybindTestUp, "shift_up");
+        tryLoadKb(keyboardConfig, &kbKeybindShiftUp, "shift_up");
         tryLoadKb(keyboardConfig, &kbKeybindShiftDown, "shift_down");
         tryLoadKb(keyboardConfig, &kbKeybindTestSwitch, "test_switch");
         tryLoadKb(keyboardConfig, &kbKeybindTestUp, "test_up");
         tryLoadKb(keyboardConfig, &kbKeybindTestDown, "test_down");
         tryLoadKb(keyboardConfig, &kbKeybindTestEnter, "test_enter");
 
+        if (controllerConfig["gas_reversed"].is_boolean())
+            gasReversed = controllerConfig["gas_reversed"].as_boolean()->get();
+        if (controllerConfig["brakes_reversed"].is_boolean())
+            brakesReversed = controllerConfig["brakes_reversed"].as_boolean()->get();
+
+        if (controllerConfig["gas_full"].is_boolean())
+            gasFull = controllerConfig["gas_full"].as_boolean()->get();
+        if (controllerConfig["brakes_full"].is_boolean())
+            brakesFull = controllerConfig["brakes_full"].as_boolean()->get();
+
+        if (controllerConfig["deadzone"].is_floating_point())
+            deadzone = controllerConfig["deadzone"].as_floating_point()->get();
+        if (controllerConfig["use_legacy_pedals_axis"].is_boolean())
+            useLegacyPedalsAxis = controllerConfig["use_legacy_pedals_axis"].as_boolean()->get();
     } catch (toml::ex::parse_error& e) {
         printf("error reading keybinds.toml\n%s\n", e.what());
         return false;
@@ -319,9 +343,9 @@ void update_input() {
                     if (code == kbKeybindInterrupt)
                         jvs_interrupt(down);
                     if (code == kbKeybindGas)
-                        jvs_gas(down ? 128 : 0);
+                        jvs_gas(down ? 80 : 0);
                     if (code == kbKeybindBrakes)
-                        jvs_brakes(down ? 128 : 0);
+                        jvs_brakes(down ? 80 : 0);
                     if (code == kbKeybindLeft || code == kbKeybindRight) {
                         if (code == kbKeybindLeft)
                             kbSteerLeft = down;
@@ -361,6 +385,7 @@ void update_input() {
             case SDL_CONTROLLERAXISMOTION: {
                 if (!focused)
                     break;
+
                 if (event.caxis.axis == controllerAxisSteer) {
                     int axisFull = int(event.caxis.value) + maxAxis;
                     float axisRange = float(axisFull) / maxAxis;
@@ -370,16 +395,35 @@ void update_input() {
                     if (axisRange < 0.f)
                         axisRange = 0.f;
 
-                    jvs_wheel(axisRange * 128.f);
+                    if (axisRange <= deadzone + 1.f && axisRange >= 1.f - deadzone)
+                        axisRange = 1.f;
+
+                    jvs_wheel(axisRange * 127.f);
                 }
 
                 if (event.caxis.axis == controllerAxisGas) {
                     float axisRange = float(event.caxis.value) / maxAxis;
 
+                    if (gasFull) {
+                        axisRange += 1.f; // 0 - 2
+                        axisRange /= 2.f; // 0 - 1
+                        if (gasReversed)
+                            axisRange = 1.f - axisRange;
+                    } else {
+                        if (gasReversed)
+                            axisRange *= -1.f;
+                    }
+
                     if (axisRange > 1.f)
                         axisRange = 1.f;
                     if (axisRange < 0.f)
                         axisRange = 0.f;
+
+                    if (axisRange <= deadzone && axisRange >= -deadzone)
+                        axisRange = 0.f;
+
+                    if (!useLegacyPedalsAxis)
+                        axisRange *= 0.625f;
 
                     jvs_gas(axisRange * 128.f);
                 }
@@ -387,10 +431,26 @@ void update_input() {
                 if (event.caxis.axis == controllerAxisBrake) {
                     float axisRange = float(event.caxis.value) / maxAxis;
 
+                    if (brakesFull) {
+                        axisRange += 1.f; // 0 - 2
+                        axisRange /= 2.f; // 0 - 1
+                        if (brakesReversed)
+                            axisRange = 1.f - axisRange;
+                    } else {
+                        if (brakesReversed)
+                            axisRange *= -1.f;
+                    }
+
                     if (axisRange > 1.f)
                         axisRange = 1.f;
                     if (axisRange < 0.f)
                         axisRange = 0.f;
+
+                    if (axisRange <= deadzone && axisRange >= -deadzone)
+                        axisRange = 0.f;
+
+                    if (!useLegacyPedalsAxis)
+                        axisRange *= 0.625f;
 
                     jvs_brakes(axisRange * 128.f);
                 }
