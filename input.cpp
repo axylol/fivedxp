@@ -126,6 +126,13 @@ KeySym kbKeybindTestSwitch = XK_Left;
 KeySym kbKeybindTestUp = XK_Up;
 KeySym kbKeybindTestDown = XK_Down;
 KeySym kbKeybindTestEnter = XK_Right;
+KeySym kbKeybindShiftNeutral = XK_7;
+KeySym kbKeybindShift1 = XK_1;
+KeySym kbKeybindShift2 = XK_2;
+KeySym kbKeybindShift3 = XK_3;
+KeySym kbKeybindShift4 = XK_4;
+KeySym kbKeybindShift5 = XK_5;
+KeySym kbKeybindShift6 = XK_6;
 KeySym kbKeybindShiftUp = XK_p;
 KeySym kbKeybindShiftDown = XK_o;
 KeySym kbKeybindPerspective = XK_e;
@@ -185,6 +192,9 @@ void tryLoadCtrl(toml::node_view<toml::node> table, SDL_GameControllerButton * b
 }
 
 void tryLoadKb(toml::node_view<toml::node> table, KeySym* sym, std::string name) {
+    if (!table[name].is_string())
+        return;
+
     std::string configKey = table[name].as_string()->get();
 
     for (const auto& [key, value] : xKeys) {
@@ -224,6 +234,13 @@ bool loadKeybinds() {
         tryLoadKb(keyboardConfig, &kbKeybindPerspective, "perspective");
         tryLoadKb(keyboardConfig, &kbKeybindInterrupt, "interrupt");
         tryLoadKb(keyboardConfig, &kbKeybindServiceSwitch, "service");
+        tryLoadKb(keyboardConfig, &kbKeybindShiftNeutral, "shift_neutral");
+        tryLoadKb(keyboardConfig, &kbKeybindShift1, "shift_1");
+        tryLoadKb(keyboardConfig, &kbKeybindShift2, "shift_2");
+        tryLoadKb(keyboardConfig, &kbKeybindShift3, "shift_3");
+        tryLoadKb(keyboardConfig, &kbKeybindShift4, "shift_4");
+        tryLoadKb(keyboardConfig, &kbKeybindShift5, "shift_5");
+        tryLoadKb(keyboardConfig, &kbKeybindShift6, "shift_6");
         tryLoadKb(keyboardConfig, &kbKeybindShiftUp, "shift_up");
         tryLoadKb(keyboardConfig, &kbKeybindShiftDown, "shift_down");
         tryLoadKb(keyboardConfig, &kbKeybindTestSwitch, "test_switch");
@@ -302,8 +319,6 @@ void update_input() {
         {
             XNextEvent(display, &e);
 
-            //TODO: add keyboard events
-            // https://tronche.com/gui/x/xlib/events/types.html
             switch (e.type)
             {
                 case ButtonPress:
@@ -334,6 +349,20 @@ void update_input() {
                         jvs_test_down(down);
                     if (code == kbKeybindTestEnter)
                         jvs_test_enter(down);
+                    if (code == kbKeybindShiftNeutral && down)
+                        jvs_gear(0);
+                    if (code == kbKeybindShift1 && down)
+                        jvs_gear(1);
+                    if (code == kbKeybindShift2 && down)
+                        jvs_gear(2);
+                    if (code == kbKeybindShift3 && down)
+                        jvs_gear(3);
+                    if (code == kbKeybindShift4 && down)
+                        jvs_gear(4);
+                    if (code == kbKeybindShift5 && down)
+                        jvs_gear(5);
+                    if (code == kbKeybindShift6 && down)
+                        jvs_gear(6);
                     if (code == kbKeybindShiftUp && down)
                         jvs_shift_up();
                     if (code == kbKeybindShiftDown && down)
