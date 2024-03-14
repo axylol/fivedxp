@@ -238,7 +238,7 @@ bool loadKeybinds() {
 
         if (controllerConfig["gas_full"].is_boolean())
             gasFull = controllerConfig["gas_full"].as_boolean()->get();
-        if (controllerConfig["brakes_reversed"].is_boolean())
+        if (controllerConfig["brakes_full"].is_boolean())
             brakesFull = controllerConfig["brakes_full"].as_boolean()->get();
 
         if (controllerConfig["deadzone"].is_floating_point())
