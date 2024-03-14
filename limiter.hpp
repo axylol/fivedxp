@@ -33,11 +33,8 @@ void limiter() {
             // For FPS == 1 this is needed as tv_nsec cannot exceed 999999999
             sleepyTime.tv_nsec += newTimestamp.tv_sec*1000000000 - oldTimestamp.tv_sec*1000000000;
         }*/
-
-        if (sleepyTime.tv_nsec > 0 && sleepyTime.tv_nsec < targetFrameTime) {
-            nanosleep( &sleepyTime, &remainingTime );
-        }
-
+        if (sleepyTime.tv_nsec > 0 && sleepyTime.tv_nsec < targetFrameTime)
+            nanosleep( &sleepyTime, NULL);
         clock_gettime( clockType, &oldTimestamp );
     }
 }
