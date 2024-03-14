@@ -1,6 +1,6 @@
 [controller]
 deadzone = 0.05
-gas = "SDL_TRIGGERRIGHT" # SDL_SDL_TRIGGER(RIGHT/LEFT), SDL_(LEFT/RIGHT)X
+gas = "SDL_TRIGGERRIGHT" # SDL_SDL_TRIGGER(RIGHT/LEFT), SDL_(LEFT/RIGHT)X, SDL_(LEFT/RIGHT)Y
 gas_reversed = false
 gas_full = false
 wheel = "SDL_LEFTX"
