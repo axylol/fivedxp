@@ -1,13 +1,19 @@
 [controller]
+deadzone = 0.05
 gas = "SDL_TRIGGERRIGHT" # SDL_SDL_TRIGGER(RIGHT/LEFT), SDL_(LEFT/RIGHT)X
+gas_reversed = false
+gas_full = false
 wheel = "SDL_LEFTX"
 brakes = "SDL_TRIGGERLEFT"
+brakes_reversed = false
+brakes_full = false
+use_legacy_pedals_axis = false # setting to true makes the pedals go to 0 - 512 instead of 0 - 320
 card = "SDL_B" # SDL_START, SDL_BACK, SDL_(RIGHT/LEFT)STICK, SDL_X, SDL_A, SDL_B, SDL_Y, SDL_(RIGHT/LEFT)SHOULDER, SDL_DPAD_(LEFT/UP/DOWN/RIGHT)
 perspective = "SDL_Y"
 interrupt = "SDL_A"
 service = "SDL_X"
-shift_down = "SDL_RIGHTSHOULDER"
-shift_up = "SDL_LEFTSHOULDER"
+shift_down = "SDL_LEFTSHOULDER"
+shift_up = "SDL_RIGHTSHOULDER"
 test_switch = "SDL_DPAD_LEFT"
 test_up = "SDL_DPAD_UP"
 test_down = "SDL_DPAD_DOWN"
