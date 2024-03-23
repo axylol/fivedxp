@@ -70,18 +70,39 @@ bool readTouch(void* packet, int* size) {
             }
         }
 
-        if (isMt4) {
-            // not sure how to deal with this yet
-            memcpy(packet, touchOk, 3);
-            *size = 3;
-            return true;
-        }
-
-        return false;
+        // not sure how to deal with this yet
+        memcpy(packet, touchOk, 3);
+        *size = 3;
+        return true;
     }
 
-    touchOkResponse--;
-    memcpy(packet, touchOk, 3);
-    *size = 3;
-    return true;
+    if (touchOkResponse > 0) {
+        touchOkResponse--;
+        memcpy(packet, touchOk, 3);
+        *size = 3;
+        return true;
+    }
+
+    if (touchReady) {
+        bool sendTouch = false;
+        if (!touchPressed) {
+            if (lastTouchPressed) {
+                touchBuffer[0] = -128;
+                sendTouch = true;
+                lastTouchPressed = false;
+            }
+        } else {
+            touchBuffer[0] = -64;
+            lastTouchPressed = true;
+            sendTouch = true;
+        }
+
+        if (sendTouch) {
+            memcpy(packet, touchBuffer, 5);
+            *size = 5;
+            return true;
+        }
+    }
+
+    return false;
 }
