@@ -81,6 +81,15 @@ defineHook(int, open, const char *pathname, int flags, ...) {
         return ret;
     }
 
+    if (strcmp(pathname, "/dev/ttyS3") == 0 && redirectBanaReader){
+        printf("open banareader %s\n", redirectBanaReader);
+        int ret = callOld(open, redirectBanaReader, flags);
+        if (ret == -1) {
+            printf("cant open banareader %d\n", errno);
+        }
+        return ret;
+    }
+
     if ((strcmp(pathname, "/dev/ttyS2") == 0 || strcmp(pathname, "/dev/tnt0") == 0) && useJvs)
         return jvsFd;
 
@@ -568,6 +577,9 @@ void initialize_wlldr() {
 
     if (redirectMagneticCard)
         printf("Redirecting mgcard to %s\n", redirectMagneticCard);
+
+    if (redirectBanaReader)
+        printf("Redirecting banareader to %s\n", redirectBanaReader);
 
     initHasp();
     printf("hasp\n");
