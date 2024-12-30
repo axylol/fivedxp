@@ -575,6 +575,11 @@ void initialize_wlldr() {
 
     printf("terminal=%d, mt4=%d\n", isTerminal, isMt4);
 
+    if (redirectBanaReader && useBana) {
+        printf("Unable to enable Banapass Emulation and Banapass Reader Redirect, please check config and try again.");
+        exit(1);
+    }
+
     if (redirectMagneticCard)
         printf("Redirecting mgcard to %s\n", redirectMagneticCard);
 
