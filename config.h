@@ -14,5 +14,7 @@ extern bool useTouch;
 extern bool useKeyboard;
 extern bool useBana;
 extern bool useLimiter;
+extern char* redirectBanaReader;
+extern bool termSpoof;
 
 bool loadConfig();

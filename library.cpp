@@ -81,6 +81,15 @@ defineHook(int, open, const char *pathname, int flags, ...) {
         return ret;
     }
 
+    if (strcmp(pathname, "/dev/ttyS3") == 0 && redirectBanaReader){
+        printf("open banareader %s\n", redirectBanaReader);
+        int ret = callOld(open, redirectBanaReader, flags);
+        if (ret == -1) {
+            printf("cant open banareader %d\n", errno);
+        }
+        return ret;
+    }
+
     if ((strcmp(pathname, "/dev/ttyS2") == 0 || strcmp(pathname, "/dev/tnt0") == 0) && useJvs)
         return jvsFd;
 
@@ -384,7 +393,7 @@ defineHook(int, connect, int sockfd, const struct sockaddr *addr, socklen_t addr
 
     printf("connect %s %d\n", ip, port);
 
-    if (port == 50765) {
+    if (port == 50765 && termSpoof) {
         in->sin_addr.s_addr = inet_addr("127.0.0.1");
     }
 
@@ -471,7 +480,8 @@ defineHook(ssize_t, recvmsg, int fd, struct msghdr *msg, int flags) {
                             break;
                         }
                         case 4: {
-                            in->sin_addr.s_addr = inet_addr("192.168.92.20");
+                            if (termSpoof)
+                                in->sin_addr.s_addr = inet_addr("192.168.92.20");
                             break;
                         }
                     }
@@ -566,8 +576,16 @@ void initialize_wlldr() {
 
     printf("terminal=%d, mt4=%d\n", isTerminal, isMt4);
 
+    if (redirectBanaReader && useBana) {
+        printf("Unable to enable Banapass Emulation and Banapass Reader Redirect, please check config and try again.");
+        exit(1);
+    }
+
     if (redirectMagneticCard)
         printf("Redirecting mgcard to %s\n", redirectMagneticCard);
+
+    if (redirectBanaReader)
+        printf("Redirecting banareader to %s\n", redirectBanaReader);
 
     initHasp();
     printf("hasp\n");

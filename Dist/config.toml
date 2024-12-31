@@ -8,6 +8,13 @@ enabled = true
 access_code = "111"
 chip_id = "222"
 
+[bana_redir]
+redirect = true
+path = "/dev/ttyACM1"
+
+[term_spoof]
+enabled = true
+
 [emu]
 jvs = true
 str400 = true
