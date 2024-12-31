@@ -15,6 +15,7 @@ bool useKeyboard = true;
 bool useBana = true;
 bool useLimiter = true;
 char* redirectBanaReader = NULL;
+bool termSpoof = true;
 
 char* copyCharString(char* str) {
     size_t len = strlen(str);
@@ -50,6 +51,10 @@ bool loadConfig() {
         auto banaRedirConfig = config["bana_redir"];
         if (banaRedirConfig.is_table() && banaRedirConfig["redirect"].as_boolean()->get())
             redirectBanaReader = createCharString(banaRedirConfig["path"].as_string()->get());
+
+        auto termSpoofConfig = config["term_spoof"];
+        if (termSpoofConfig.is_table())
+            termSpoof = termSpoofConfig["enabled"].as_boolean()->get();
 
         auto emuConfig = config["emu"];
         useJvs = emuConfig["jvs"].as_boolean()->get();

@@ -12,6 +12,9 @@ chip_id = "222"
 redirect = true
 path = "/dev/ttyACM1"
 
+[term_spoof]
+enabled = false
+
 [emu]
 jvs = true
 str400 = true

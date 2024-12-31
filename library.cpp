@@ -393,9 +393,9 @@ defineHook(int, connect, int sockfd, const struct sockaddr *addr, socklen_t addr
 
     printf("connect %s %d\n", ip, port);
 
-    /*if (port == 50765) {
+    if (port == 50765 && termSpoof) {
         in->sin_addr.s_addr = inet_addr("127.0.0.1");
-    }*/
+    }
 
     return callOld(connect, sockfd, addr, addrlen);
 }
@@ -480,7 +480,8 @@ defineHook(ssize_t, recvmsg, int fd, struct msghdr *msg, int flags) {
                             break;
                         }
                         case 4: {
-                            //in->sin_addr.s_addr = inet_addr("192.168.92.20");
+                            if (termSpoof)
+                                in->sin_addr.s_addr = inet_addr("192.168.92.20");
                             break;
                         }
                     }
