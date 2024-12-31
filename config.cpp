@@ -48,7 +48,7 @@ bool loadConfig() {
         }
 
         auto banaRedirConfig = config["bana_redir"];
-        if (banaRedirConfig["redirect"].as_boolean()->get())
+        if (banaRedirConfig.is_table() && banaRedirConfig["redirect"].as_boolean()->get())
             redirectBanaReader = createCharString(banaRedirConfig["path"].as_string()->get());
 
         auto emuConfig = config["emu"];
