@@ -13,7 +13,7 @@ redirect = true
 path = "/dev/ttyACM1"
 
 [term_spoof]
-enabled = false
+enabled = true
 
 [emu]
 jvs = true
